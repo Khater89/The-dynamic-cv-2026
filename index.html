@@ -415,6 +415,11 @@ input:focus,textarea:focus,select:focus{
   overflow-y:auto;
   border:1px solid var(--ink-700);
 }
+.preview-frame.editing{
+  background:var(--ink-800);
+  color:var(--paper-100);
+  padding:18px;
+}
 .domain-badge{
   display:inline-flex;
   align-items:center;
@@ -718,14 +723,20 @@ input:focus,textarea:focus,select:focus{
           <div>
             <div class="result-col-head">
               <h4 data-i18n="result_cv_title"></h4>
-              <button class="btn btn-sm btn-primary" id="downloadCvBtn" data-i18n="btn_download_pdf"></button>
+              <div class="btn-row" style="gap:8px;">
+                <button class="btn btn-sm btn-ghost" id="editCvBtn" data-i18n="btn_manual_edit"></button>
+                <button class="btn btn-sm btn-primary" id="downloadCvBtn" data-i18n="btn_download_pdf"></button>
+              </div>
             </div>
             <div class="preview-frame" id="cvPreview"></div>
           </div>
           <div>
             <div class="result-col-head">
               <h4 data-i18n="result_letter_title"></h4>
-              <button class="btn btn-sm btn-primary" id="downloadLetterBtn" data-i18n="btn_download_pdf"></button>
+              <div class="btn-row" style="gap:8px;">
+                <button class="btn btn-sm btn-ghost" id="editLetterBtn" data-i18n="btn_manual_edit"></button>
+                <button class="btn btn-sm btn-primary" id="downloadLetterBtn" data-i18n="btn_download_pdf"></button>
+              </div>
             </div>
             <div class="preview-frame" id="letterPreview"></div>
           </div>
@@ -902,6 +913,18 @@ const I18N = {
   result_cv_title:           { ar:'السيرة الذاتية', en:'CV' },
   result_letter_title:       { ar:'Cover Letter', en:'Cover Letter' },
   btn_download_pdf:          { ar:'طباعة / حفظ PDF', en:'Print / Save as PDF' },
+  btn_manual_edit:           { ar:'تعديل يدوي', en:'Manual edit' },
+  btn_move_up:               { ar:'▲ فوق', en:'▲ Up' },
+  btn_move_down:             { ar:'▼ تحت', en:'▼ Down' },
+  fld_cv_headline:           { ar:'المسمى المستهدف (Headline)', en:'Target headline' },
+  fld_cv_summary:            { ar:'الملخص المهني', en:'Professional summary' },
+  fld_cv_coreskills:         { ar:'المهارات الأساسية (مفصولة بفاصلة)', en:'Core skills (comma-separated)' },
+  fld_letter_salutation:     { ar:'التحية الافتتاحية', en:'Salutation' },
+  fld_letter_closing:        { ar:'خاتمة الرسالة', en:'Closing' },
+  word_paragraphs_section:   { ar:'الفقرات', en:'Paragraphs' },
+  word_paragraph:            { ar:'فقرة', en:'Paragraph' },
+  msg_manual_edit_saved:     { ar:'تم حفظ التعديلات ✓', en:'Edits saved ✓' },
+  msg_finish_manual_edit_first: { ar:'احفظ أو ألغِ التعديل اليدوي الحالي أول.', en:'Save or cancel the current manual edit first.' },
 
   msg_need_jd:               { ar:'الصق الوصف الوظيفي أول.', en:'Paste the job description first.' },
   msg_db_empty:               { ar:'قاعدة البيانات فاضية. روح لتبويب "قاعدة البيانات" وضيف خبراتك أول.', en:'The database is empty. Go to the "Database" tab and add your experience first.' },
@@ -982,7 +1005,9 @@ let ui = {
   editing: { workExperience:null, education:null, skills:null, certifications:null, projects:null, languages:null, personalInfo:false },
   pdfStyle: 'simple',
   busy: false,
-  chatBusy: false
+  chatBusy: false,
+  cvDraft: null,     // working copy of tailoredCV while manually editing, null when not editing
+  letterDraft: null  // working copy of coverLetter while manually editing, null when not editing
 };
 
 /* --------------------------- persistence --------------------------- */
@@ -1683,6 +1708,7 @@ async function startChatSession(){
 
 async function sendChatFeedback(text){
   if(!text || !state.chatSession || ui.chatBusy) return;
+  if(ui.cvDraft || ui.letterDraft){ showStatus('generateStatus','error', t('msg_finish_manual_edit_first')); return; }
   state.chatSession.turns.push({ role:'user', text });
   ui.chatBusy = true;
   document.getElementById('sendChatBtn').disabled = true;
@@ -1713,6 +1739,10 @@ function initGenerateTab(){
   document.getElementById('newChatBtn').addEventListener('click', ()=>{
     if(!confirm(t('msg_new_chat_confirm'))) return;
     state.chatSession = null;
+    ui.cvDraft = null;
+    ui.letterDraft = null;
+    document.getElementById('cvPreview').classList.remove('editing');
+    document.getElementById('letterPreview').classList.remove('editing');
     saveState();
     document.getElementById('jobDescArea').value = '';
     document.getElementById('resultsWrap').style.display = 'none';
@@ -1720,6 +1750,8 @@ function initGenerateTab(){
   });
   document.getElementById('swatchSimple').addEventListener('click', ()=> setStyle('simple'));
   document.getElementById('swatchPro').addEventListener('click', ()=> setStyle('professional'));
+  document.getElementById('editCvBtn').addEventListener('click', toggleCvEdit);
+  document.getElementById('editLetterBtn').addEventListener('click', toggleLetterEdit);
   document.getElementById('downloadCvBtn').addEventListener('click', ()=> exportPdf('cv'));
   document.getElementById('downloadLetterBtn').addEventListener('click', ()=> exportPdf('letter'));
 
@@ -1777,8 +1809,281 @@ function renderResultsFromChat(){
   const r = getLatestResult();
   if(!r){ document.getElementById('resultsWrap').style.display = 'none'; return; }
   document.getElementById('resultsWrap').style.display = 'block';
-  document.getElementById('cvPreview').innerHTML = buildCvHtml(r.tailoredCV, ui.pdfStyle);
-  document.getElementById('letterPreview').innerHTML = buildLetterHtml(r.tailoredCV, r.coverLetter, ui.pdfStyle);
+  if(!ui.cvDraft) document.getElementById('cvPreview').innerHTML = buildCvHtml(r.tailoredCV, ui.pdfStyle);
+  if(!ui.letterDraft) document.getElementById('letterPreview').innerHTML = buildLetterHtml(r.tailoredCV, r.coverLetter, ui.pdfStyle);
+}
+
+/* =====================================================================
+   MANUAL EDITING of the generated CV / cover letter
+   No AI mediation here — direct field editing, same authority level as
+   editing the database directly. Lets the person fix or reorder anything
+   (e.g. swap which role is listed first) without arguing with the model
+   about facts it is correctly refusing to alter on its own.
+   ===================================================================== */
+const CV_WE_FIELDS = [
+  {key:'title', labelKey:'fld_we_title', type:'text'},
+  {key:'company', labelKey:'fld_we_company', type:'text'},
+  {key:'location', labelKey:'fld_we_location', type:'text'},
+  {key:'startDate', labelKey:'fld_we_startDate', type:'text'},
+  {key:'endDate', labelKey:'fld_we_endDate', type:'text'},
+  {key:'isCurrent', labelKey:'fld_we_isCurrent', type:'checkbox'},
+  {key:'bullets', labelKey:'fld_we_bullets', type:'lines'}
+];
+const CV_EDU_FIELDS = [
+  {key:'institution', labelKey:'fld_edu_institution', type:'text'},
+  {key:'degree', labelKey:'fld_edu_degree', type:'text'},
+  {key:'field', labelKey:'fld_edu_field', type:'text'},
+  {key:'endDate', labelKey:'fld_edu_endDate', type:'text'}
+];
+const CV_CERT_FIELDS = [
+  {key:'name', labelKey:'fld_cert_name', type:'text'},
+  {key:'issuer', labelKey:'fld_cert_issuer', type:'text'},
+  {key:'date', labelKey:'fld_cert_date', type:'text'}
+];
+const CV_PROJ_FIELDS = [
+  {key:'name', labelKey:'fld_proj_name', type:'text'},
+  {key:'bullets', labelKey:'fld_proj_bullets', type:'lines'}
+];
+
+const DRAFT_ARRAY_REGISTRY = {
+  'cved-we':   { getArray:()=>ui.cvDraft.workExperience,  fields:CV_WE_FIELDS,   blank:()=>({title:'',company:'',location:'',startDate:'',endDate:'',isCurrent:false,bullets:[]}) },
+  'cved-edu':  { getArray:()=>ui.cvDraft.education,        fields:CV_EDU_FIELDS,  blank:()=>({institution:'',degree:'',field:'',endDate:''}) },
+  'cved-cert': { getArray:()=>ui.cvDraft.certifications,   fields:CV_CERT_FIELDS, blank:()=>({name:'',issuer:'',date:''}) },
+  'cved-proj': { getArray:()=>ui.cvDraft.projects,         fields:CV_PROJ_FIELDS, blank:()=>({name:'',bullets:[]}) }
+};
+
+function renderDraftArrayEditor(itemsArray, idPrefix, fieldDefs, summaryFn){
+  let html = '';
+  itemsArray.forEach((item, i)=>{
+    const fieldsHtml = fieldDefs.map(f=>{
+      const val = item[f.key];
+      const fid = idPrefix+'-'+i+'-'+f.key;
+      const label = t(f.labelKey);
+      if(f.type === 'checkbox'){
+        return `<div class="checkbox-field"><input type="checkbox" id="${fid}" ${val?'checked':''}><label for="${fid}">${esc(label)}</label></div>`;
+      }
+      if(f.type === 'lines'){
+        return `<div class="field"><label>${esc(label)}</label><textarea id="${fid}" rows="3">${esc(arrayToLines(val))}</textarea></div>`;
+      }
+      return `<div class="field"><label>${esc(label)}</label><input type="text" id="${fid}" value="${escAttr(val)}"></div>`;
+    }).join('');
+    html += `
+    <div class="edit-form">
+      <div class="edit-form-title">${esc(summaryFn(item))}</div>
+      ${fieldsHtml}
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="moveDraftItem('${idPrefix}',${i},-1)">${esc(t('btn_move_up'))}</button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="moveDraftItem('${idPrefix}',${i},1)">${esc(t('btn_move_down'))}</button>
+        <button class="btn btn-danger btn-sm" type="button" onclick="deleteDraftItem('${idPrefix}',${i})">${esc(t('btn_delete'))}</button>
+      </div>
+    </div>`;
+  });
+  html += `<button class="btn btn-ghost btn-sm" type="button" onclick="addDraftItem('${idPrefix}')">${esc(t('btn_add_manual'))}</button>`;
+  return html;
+}
+
+function readDraftArray(idPrefix, fields, count){
+  const arr = [];
+  for(let i=0;i<count;i++){
+    const item = {};
+    fields.forEach(f=>{
+      const el = document.getElementById(idPrefix+'-'+i+'-'+f.key);
+      if(!el) return;
+      if(f.type === 'checkbox') item[f.key] = el.checked;
+      else if(f.type === 'lines') item[f.key] = linesToArray(el.value);
+      else item[f.key] = el.value.trim();
+    });
+    arr.push(item);
+  }
+  return arr;
+}
+
+function readCvFormIntoDraft(){
+  const d = ui.cvDraft;
+  d.fullName = document.getElementById('cved-fullName').value.trim();
+  d.headline = document.getElementById('cved-headline').value.trim();
+  d.email = document.getElementById('cved-email').value.trim();
+  d.phone = document.getElementById('cved-phone').value.trim();
+  d.location = document.getElementById('cved-location').value.trim();
+  d.linkedin = document.getElementById('cved-linkedin').value.trim();
+  d.website = document.getElementById('cved-website').value.trim();
+  d.summary = document.getElementById('cved-summary').value.trim();
+  d.coreSkills = tagsToArray(document.getElementById('cved-coreSkills').value);
+  d.workExperience = readDraftArray('cved-we', CV_WE_FIELDS, d.workExperience.length);
+  d.education = readDraftArray('cved-edu', CV_EDU_FIELDS, d.education.length);
+  d.certifications = readDraftArray('cved-cert', CV_CERT_FIELDS, d.certifications.length);
+  d.projects = readDraftArray('cved-proj', CV_PROJ_FIELDS, d.projects.length);
+}
+
+function readLetterFormIntoDraft(){
+  const d = ui.letterDraft;
+  d.salutation = document.getElementById('lted-salutation').value.trim();
+  d.closing = document.getElementById('lted-closing').value.trim();
+  const paras = [];
+  for(let i=0;i<d.paragraphs.length;i++){
+    const el = document.getElementById('lted-para-'+i);
+    if(el) paras.push(el.value.trim());
+  }
+  d.paragraphs = paras;
+}
+
+function moveDraftItem(idPrefix, index, direction){
+  readCvFormIntoDraft();
+  const arr = DRAFT_ARRAY_REGISTRY[idPrefix].getArray();
+  const j = index + direction;
+  if(j < 0 || j >= arr.length) return;
+  const tmp = arr[index]; arr[index] = arr[j]; arr[j] = tmp;
+  renderCvEditForm();
+}
+function deleteDraftItem(idPrefix, index){
+  readCvFormIntoDraft();
+  DRAFT_ARRAY_REGISTRY[idPrefix].getArray().splice(index,1);
+  renderCvEditForm();
+}
+function addDraftItem(idPrefix){
+  readCvFormIntoDraft();
+  DRAFT_ARRAY_REGISTRY[idPrefix].getArray().push(DRAFT_ARRAY_REGISTRY[idPrefix].blank());
+  renderCvEditForm();
+}
+
+function moveParagraph(i, dir){
+  readLetterFormIntoDraft();
+  const arr = ui.letterDraft.paragraphs;
+  const j = i + dir;
+  if(j < 0 || j >= arr.length) return;
+  const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  renderLetterEditForm();
+}
+function deleteParagraph(i){
+  readLetterFormIntoDraft();
+  ui.letterDraft.paragraphs.splice(i,1);
+  renderLetterEditForm();
+}
+function addParagraph(){
+  readLetterFormIntoDraft();
+  ui.letterDraft.paragraphs.push('');
+  renderLetterEditForm();
+}
+
+function renderLetterParagraphsEditor(){
+  let html = '';
+  ui.letterDraft.paragraphs.forEach((p,i)=>{
+    html += `
+    <div class="edit-form">
+      <div class="edit-form-title">${esc(t('word_paragraph'))} ${i+1}</div>
+      <textarea id="lted-para-${i}" rows="3">${esc(p)}</textarea>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="moveParagraph(${i},-1)">${esc(t('btn_move_up'))}</button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="moveParagraph(${i},1)">${esc(t('btn_move_down'))}</button>
+        <button class="btn btn-danger btn-sm" type="button" onclick="deleteParagraph(${i})">${esc(t('btn_delete'))}</button>
+      </div>
+    </div>`;
+  });
+  html += `<button class="btn btn-ghost btn-sm" type="button" onclick="addParagraph()">${esc(t('btn_add_manual'))}</button>`;
+  return html;
+}
+
+function renderCvEditForm(){
+  const d = ui.cvDraft;
+  const weSummary = item => (item.title || '—') + (item.company ? ' — '+item.company : '');
+  const eduSummary = item => item.degree || '—';
+  const certSummary = item => item.name || '—';
+  const projSummary = item => item.name || '—';
+
+  document.getElementById('cvPreview').innerHTML = `
+    <div class="field-row">
+      <div class="field"><label>${esc(t('fld_pi_fullName'))}</label><input type="text" id="cved-fullName" value="${escAttr(d.fullName)}"></div>
+      <div class="field"><label>${esc(t('fld_cv_headline'))}</label><input type="text" id="cved-headline" value="${escAttr(d.headline)}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>${esc(t('fld_pi_email'))}</label><input type="text" dir="ltr" id="cved-email" value="${escAttr(d.email)}"></div>
+      <div class="field"><label>${esc(t('fld_pi_phone'))}</label><input type="text" dir="ltr" id="cved-phone" value="${escAttr(d.phone)}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>${esc(t('fld_pi_location'))}</label><input type="text" id="cved-location" value="${escAttr(d.location)}"></div>
+      <div class="field"><label>${esc(t('fld_pi_linkedin'))}</label><input type="text" dir="ltr" id="cved-linkedin" value="${escAttr(d.linkedin)}"></div>
+    </div>
+    <div class="field"><label>${esc(t('fld_pi_website'))}</label><input type="text" dir="ltr" id="cved-website" value="${escAttr(d.website)}"></div>
+    <div class="field"><label>${esc(t('fld_cv_summary'))}</label><textarea id="cved-summary" rows="3">${esc(d.summary)}</textarea></div>
+    <div class="field"><label>${esc(t('fld_cv_coreskills'))}</label><input type="text" id="cved-coreSkills" value="${escAttr(arrayToTags(d.coreSkills))}"></div>
+
+    <div class="section-block-head" style="margin-top:22px;"><h3>${esc(t('sec_workExperience_label'))}</h3></div>
+    ${renderDraftArrayEditor(d.workExperience, 'cved-we', CV_WE_FIELDS, weSummary)}
+
+    <div class="section-block-head" style="margin-top:22px;"><h3>${esc(t('sec_education_label'))}</h3></div>
+    ${renderDraftArrayEditor(d.education, 'cved-edu', CV_EDU_FIELDS, eduSummary)}
+
+    <div class="section-block-head" style="margin-top:22px;"><h3>${esc(t('sec_certifications_label'))}</h3></div>
+    ${renderDraftArrayEditor(d.certifications, 'cved-cert', CV_CERT_FIELDS, certSummary)}
+
+    <div class="section-block-head" style="margin-top:22px;"><h3>${esc(t('sec_projects_label'))}</h3></div>
+    ${renderDraftArrayEditor(d.projects, 'cved-proj', CV_PROJ_FIELDS, projSummary)}
+
+    <div class="btn-row" style="margin-top:20px;">
+      <button class="btn btn-primary btn-sm" type="button" onclick="saveCvEdit()">${esc(t('btn_save'))}</button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="cancelCvEdit()">${esc(t('btn_cancel'))}</button>
+    </div>`;
+}
+
+function renderLetterEditForm(){
+  const d = ui.letterDraft;
+  document.getElementById('letterPreview').innerHTML = `
+    <div class="field"><label>${esc(t('fld_letter_salutation'))}</label><input type="text" id="lted-salutation" value="${escAttr(d.salutation)}"></div>
+    <div class="section-block-head" style="margin-top:14px;"><h3>${esc(t('word_paragraphs_section'))}</h3></div>
+    ${renderLetterParagraphsEditor()}
+    <div class="field" style="margin-top:14px;"><label>${esc(t('fld_letter_closing'))}</label><input type="text" id="lted-closing" value="${escAttr(d.closing)}"></div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-primary btn-sm" type="button" onclick="saveLetterEdit()">${esc(t('btn_save'))}</button>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="cancelLetterEdit()">${esc(t('btn_cancel'))}</button>
+    </div>`;
+}
+
+function toggleCvEdit(){
+  if(ui.cvDraft){ cancelCvEdit(); return; }
+  const r = getLatestResult();
+  if(!r) return;
+  ui.cvDraft = JSON.parse(JSON.stringify(r.tailoredCV));
+  document.getElementById('cvPreview').classList.add('editing');
+  renderCvEditForm();
+}
+function saveCvEdit(){
+  readCvFormIntoDraft();
+  const r = getLatestResult();
+  r.tailoredCV = ui.cvDraft;
+  ui.cvDraft = null;
+  document.getElementById('cvPreview').classList.remove('editing');
+  saveState();
+  renderResultsFromChat();
+  showStatus('generateStatus','success', t('msg_manual_edit_saved'));
+}
+function cancelCvEdit(){
+  ui.cvDraft = null;
+  document.getElementById('cvPreview').classList.remove('editing');
+  renderResultsFromChat();
+}
+
+function toggleLetterEdit(){
+  if(ui.letterDraft){ cancelLetterEdit(); return; }
+  const r = getLatestResult();
+  if(!r) return;
+  ui.letterDraft = JSON.parse(JSON.stringify(r.coverLetter));
+  document.getElementById('letterPreview').classList.add('editing');
+  renderLetterEditForm();
+}
+function saveLetterEdit(){
+  readLetterFormIntoDraft();
+  const r = getLatestResult();
+  r.coverLetter = ui.letterDraft;
+  ui.letterDraft = null;
+  document.getElementById('letterPreview').classList.remove('editing');
+  saveState();
+  renderResultsFromChat();
+  showStatus('generateStatus','success', t('msg_manual_edit_saved'));
+}
+function cancelLetterEdit(){
+  ui.letterDraft = null;
+  document.getElementById('letterPreview').classList.remove('editing');
+  renderResultsFromChat();
 }
 
 /* --------------------------- CV / letter HTML builders (always English — fixed deliverable, not app UI) --------------------------- */
@@ -1874,6 +2179,8 @@ function waitTwoFrames(){
 }
 
 async function exportPdf(kind){
+  if(kind === 'cv' && ui.cvDraft) saveCvEdit();
+  if(kind === 'letter' && ui.letterDraft) saveLetterEdit();
   const r = getLatestResult();
   if(!r) return;
   const btn = document.getElementById(kind === 'cv' ? 'downloadCvBtn' : 'downloadLetterBtn');
