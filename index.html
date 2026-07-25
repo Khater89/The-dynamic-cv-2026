@@ -487,6 +487,18 @@ input:focus,textarea:focus,select:focus{
 .match-sub-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent2-300);margin-bottom:6px;}
 .match-sub-block p{font-size:13.5px;color:var(--paper-300);line-height:1.65;margin:0;}
 
+/* ============================= INTERVIEW PREP ============================= */
+.interview-section-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent2-300);margin-bottom:10px;}
+.interview-question-card{background:var(--ink-750);border:1px solid var(--ink-700);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:10px;}
+.interview-question-cat{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-300);margin-bottom:6px;}
+.interview-question-text{font-size:14px;font-weight:600;color:var(--paper-100);margin-bottom:6px;}
+.interview-question-guidance{font-size:12.5px;color:var(--paper-300);line-height:1.55;}
+.interview-weakpoint-card{background:var(--ink-750);border:1px solid var(--ink-700);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:10px;}
+.interview-weakpoint-concern{font-size:13.5px;font-weight:600;color:var(--paper-100);margin-bottom:6px;}
+.interview-weakpoint-answer{font-size:12.5px;color:var(--paper-300);line-height:1.6;}
+.interview-list{margin:0;padding-inline-start:20px;}
+.interview-list li{font-size:13.5px;color:var(--paper-300);margin-bottom:8px;line-height:1.55;}
+
 /* ============================= CHAT (guided refinement) ============================= */
 .chat-log{
   max-height:360px;
@@ -576,18 +588,77 @@ input:focus,textarea:focus,select:focus{
 .pdf-letter-body .closing{margin-top:20px;}
 .pdf-letter-body .closing .name{font-family:var(--font-serif);font-size:15px;font-weight:700;margin-top:26px;color:#161A21;}
 
-.pdf-stage{position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1;}
+/* pdf-stage no longer used — PDF export now opens a clean print window */
 
-@media print{
-  .app-shell{display:none !important;}
-  .pdf-stage{
-    position:static !important;
-    width:auto !important;
-    left:auto !important; top:auto !important;
-    z-index:auto !important;
-  }
+/* ============================= LANDING PAGE ============================= */
+.landing{
+  position:fixed;inset:0;z-index:100;
+  background:var(--ink-950);
+  display:flex;align-items:center;justify-content:center;
+  overflow-y:auto;
+  padding:40px 20px;
 }
-@page{ margin:0; }
+.landing.hidden{display:none;}
+.landing-inner{max-width:680px;text-align:center;}
+.landing-badge{
+  display:inline-block;
+  font-family:var(--font-mono);font-size:13px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent-300);
+  border:1px solid rgba(var(--accent-rgb),0.35);background:rgba(var(--accent-rgb),0.08);
+  padding:5px 16px;border-radius:20px;margin-bottom:28px;
+}
+.landing-title{font-family:var(--font-display);font-size:42px;font-weight:700;color:var(--paper-100);line-height:1.2;margin:0 0 16px;}
+.landing-sub{font-size:16px;color:var(--paper-500);line-height:1.65;margin:0 0 40px;max-width:520px;margin-left:auto;margin-right:auto;}
+.landing-features{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:40px;}
+.landing-feature{background:var(--ink-800);border:1px solid var(--ink-700);border-radius:var(--radius-lg);padding:22px 18px;text-align:center;transition:border-color .2s ease, transform .2s ease;}
+.landing-feature:hover{border-color:var(--glass-border);transform:translateY(-2px);}
+.landing-feature-icon{font-size:28px;margin-bottom:12px;}
+.landing-feature h3{font-family:var(--font-display);font-size:15px;color:var(--paper-100);margin:0 0 8px;}
+.landing-feature p{font-size:13px;color:var(--paper-500);margin:0;line-height:1.5;}
+.btn-lg{padding:14px 36px;font-size:16px;border-radius:var(--radius-md);}
+.landing-contact{margin-top:36px;font-size:13px;color:var(--paper-500);}
+.landing-contact a{color:var(--accent2-300);}
+@media(max-width:700px){
+  .landing-title{font-size:28px;}
+  .landing-features{grid-template-columns:1fr;gap:14px;}
+}
+
+/* ============================= SAVED JOBS ============================= */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.6);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;
+}
+.modal-overlay.show{display:flex;}
+.modal-box{
+  background:var(--ink-900);
+  border:1px solid var(--ink-700);
+  border-radius:var(--radius-lg);
+  padding:28px;
+  width:100%;max-width:420px;
+}
+.modal-box h3{font-family:var(--font-display);font-size:18px;color:var(--paper-100);margin:0 0 16px;}
+.saved-job-card{
+  background:var(--ink-800);border:1px solid var(--ink-700);border-radius:var(--radius-lg);
+  padding:18px 20px;margin-bottom:12px;
+  display:flex;align-items:flex-start;gap:16px;
+  transition:border-color .2s ease, transform .2s ease;
+}
+.saved-job-card:hover{border-color:var(--glass-border);transform:translateY(-1px);}
+.saved-job-info{flex:1;min-width:0;}
+.saved-job-domain{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-300);margin-bottom:4px;}
+.saved-job-title{font-size:14.5px;font-weight:600;color:var(--paper-100);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.saved-job-match{font-family:var(--font-mono);font-size:12px;margin-bottom:4px;}
+.saved-job-date{font-size:11.5px;color:var(--paper-500);font-family:var(--font-mono);}
+.saved-job-actions{display:flex;gap:8px;flex-shrink:0;align-items:center;}
+.star-btn{
+  background:none;border:none;cursor:pointer;font-size:20px;
+  color:var(--paper-500);transition:color .15s ease, transform .15s ease;
+  padding:4px;
+}
+.star-btn:hover{transform:scale(1.15);}
+.star-btn.starred{color:#f5c842;}
 
 /* ============================= JSON IO / SETTINGS ============================= */
 .kv-note{
@@ -666,6 +737,7 @@ input[type=color]::-webkit-color-swatch{border-radius:5px;border:none;}
     <div class="rail-tab active" data-tab="settings"><span class="tab-num">01</span> <span data-i18n="tab_settings"></span></div>
     <div class="rail-tab" data-tab="database"><span class="tab-num">02</span> <span data-i18n="tab_database"></span></div>
     <div class="rail-tab" data-tab="generate"><span class="tab-num">03</span> <span data-i18n="tab_generate"></span></div>
+    <div class="rail-tab" data-tab="saved"><span class="tab-num">04</span> <span data-i18n="tab_saved"></span></div>
     <div class="rail-foot" data-i18n="rail_foot"></div>
   </nav>
 
@@ -775,7 +847,10 @@ input[type=color]::-webkit-color-swatch{border-radius:5px;border:none;}
       </div>
 
       <div id="resultsWrap" style="display:none;">
-        <span class="domain-badge" id="domainBadge"></span>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+          <span class="domain-badge" id="domainBadge" style="margin-bottom:0;"></span>
+          <button class="star-btn" id="saveJobBtn" type="button" title="Save">☆</button>
+        </div>
 
         <div class="card" id="matchAnalysisCard" style="display:none;">
           <div class="card-title" data-i18n="match_analysis_title"></div>
@@ -851,14 +926,73 @@ input[type=color]::-webkit-color-swatch{border-radius:5px;border:none;}
           </div>
         </div>
 
+        <div class="card">
+          <div class="card-title" data-i18n="interview_prep_title"></div>
+          <p style="font-size:13px;color:var(--paper-300);margin:0 0 14px;" data-i18n="interview_prep_intro"></p>
+          <button class="btn btn-primary" id="generateInterviewBtn" data-i18n="btn_generate_interview_prep"></button>
+          <div class="status" id="interviewStatus"></div>
+          <div id="interviewPrepContent" dir="ltr" style="display:none;margin-top:20px;"></div>
+        </div>
+
       </div>
+    </section>
+
+    <!-- ===================== TAB 4: SAVED JOBS ===================== -->
+    <section class="panel" id="panel-saved">
+      <div class="panel-head">
+        <h2 data-i18n="saved_heading"></h2>
+        <p data-i18n="saved_desc"></p>
+      </div>
+      <div id="savedJobsList"></div>
     </section>
 
   </main>
 </div>
 
-<!-- off-screen stage used only for PDF rasterization -->
-<div class="pdf-stage" id="pdfStage"></div>
+<!-- ============================= LANDING PAGE ============================= -->
+<div class="landing" id="landingPage">
+  <div class="landing-inner">
+    <div class="landing-badge">CV-OS</div>
+    <h1 class="landing-title" data-i18n="landing_title"></h1>
+    <p class="landing-sub" data-i18n="landing_sub"></p>
+    <div class="landing-features">
+      <div class="landing-feature">
+        <div class="landing-feature-icon">📋</div>
+        <h3 data-i18n="landing_f1_title"></h3>
+        <p data-i18n="landing_f1_desc"></p>
+      </div>
+      <div class="landing-feature">
+        <div class="landing-feature-icon">🎯</div>
+        <h3 data-i18n="landing_f2_title"></h3>
+        <p data-i18n="landing_f2_desc"></p>
+      </div>
+      <div class="landing-feature">
+        <div class="landing-feature-icon">🎤</div>
+        <h3 data-i18n="landing_f3_title"></h3>
+        <p data-i18n="landing_f3_desc"></p>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-lg" id="landingStartBtn" data-i18n="landing_cta"></button>
+    <div class="landing-contact">
+      <p data-i18n="landing_contact_text"></p>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="saveJobModal">
+  <div class="modal-box">
+    <h3 data-i18n="save_modal_title"></h3>
+    <div class="field">
+      <label data-i18n="save_modal_label"></label>
+      <input type="text" id="saveJobNameInput" data-i18n-placeholder="save_modal_placeholder">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="saveJobConfirmBtn" data-i18n="btn_save"></button>
+      <button class="btn btn-ghost" id="saveJobCancelBtn" data-i18n="btn_cancel"></button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* =====================================================================
@@ -878,6 +1012,30 @@ const I18N = {
   tab_settings:              { ar:'الإعدادات', en:'Settings' },
   tab_database:              { ar:'قاعدة البيانات', en:'Database' },
   tab_generate:              { ar:'توليد CV', en:'Generate CV' },
+  tab_saved:                 { ar:'الوظائف المحفوظة', en:'Saved Jobs' },
+
+  saved_heading:             { ar:'الوظائف المحفوظة', en:'Saved Jobs' },
+  saved_desc:                { ar:'كل وظيفة حفظتها بنجمة ⭐ بتتخزن هون مع كامل الجلسة (الوصف، التطابق، الـCV، المقابلة). اضغط عليها لاسترجاعها.', en:'Every job you starred ⭐ is stored here with its full session (description, match, CV, interview prep). Click to restore it.' },
+  saved_empty:               { ar:'ما في وظائف محفوظة بعد. ولّد CV لأي وظيفة واضغط ⭐ لحفظها.', en:'No saved jobs yet. Generate a CV for any job and press ⭐ to save it.' },
+  msg_job_saved:             { ar:'تم حفظ الوظيفة ⭐', en:'Job saved ⭐' },
+  save_modal_title:          { ar:'حفظ الوظيفة', en:'Save Job' },
+  save_modal_label:          { ar:'اسم مختصر لتتعرف عليها بسهولة لاحقاً', en:'A short name to recognize it later' },
+  save_modal_placeholder:    { ar:'مثال: مهندس شبكات - شركة X', en:'e.g. Network Engineer - Company X' },
+  msg_job_unsaved:           { ar:'تم إزالة الوظيفة من المحفوظات.', en:'Job removed from saved.' },
+  msg_job_restored:          { ar:'تم استرجاع الجلسة المحفوظة.', en:'Saved session restored.' },
+  msg_delete_saved_confirm:  { ar:'حذف هاي الوظيفة المحفوظة نهائياً؟', en:'Delete this saved job permanently?' },
+  btn_restore:               { ar:'استرجاع', en:'Restore' },
+
+  landing_title:             { ar:'سيرتك الذاتية،<br>مصنوعة بذكاء.', en:'Your CV,<br>intelligently crafted.' },
+  landing_sub:               { ar:'قاعدة بيانات واحدة لكل خبراتك. الصق أي وصف وظيفي، واحصل على CV مخصص + Cover Letter + تحضير مقابلة — مبني بس على خبراتك الحقيقية، بتقييم صريح بدون مجاملات.', en:'One database for all your experience. Paste any job description and get a tailored CV + Cover Letter + Interview Prep — built only from your real experience, with an honest assessment and zero flattery.' },
+  landing_cta:               { ar:'ابدأ الآن', en:'Get Started' },
+  landing_f1_title:          { ar:'قاعدة بيانات ذكية', en:'Smart Database' },
+  landing_f1_desc:           { ar:'الصق أي CV قديم، الذكاء الاصطناعي بينظمه ويدمجه تلقائياً.', en:'Paste any old CV, AI organizes and merges it automatically.' },
+  landing_f2_title:          { ar:'تقييم صريح', en:'Honest Assessment' },
+  landing_f2_desc:           { ar:'نسبة تطابق حقيقية + رأي مباشر قبل ما تضيّع وقتك.', en:'Real match percentage + direct verdict before you waste your time.' },
+  landing_f3_title:          { ar:'تحضير مقابلة', en:'Interview Prep' },
+  landing_f3_desc:           { ar:'أسئلة متوقعة + نقاط ضعف + طريقة الرد — كلها مخصصة.', en:'Expected questions + weak points + how to answer — all personalized.' },
+  landing_contact_text:      { ar:'تواصل: <a href="mailto:akhater@acuative.com">akhater@acuative.com</a>', en:'Contact: <a href="mailto:akhater@acuative.com">akhater@acuative.com</a>' },
   rail_foot:                 { ar:'يعمل بالكامل من متصفحك.<br>لا سيرفر، لا رفع بيانات.', en:'Runs entirely in your browser.<br>No server, no data upload.' },
 
   settings_heading:          { ar:'الإعدادات', en:'Settings' },
@@ -1001,6 +1159,15 @@ const I18N = {
   gen_desc:                  { ar:'الصق الوصف الوظيفي، وبعد أول نسخة تقدر توجّه الموديل بالمحادثة — "ركّز أكتر على كذا"، "قصّر هيك"، "خلي اللهجة أرسمي" — وهو بيعدّل النسخة الكاملة كل مرة.', en:'Paste the job description, and after the first version you can guide the model through conversation — "focus more on X", "shorten this", "make the tone more formal" — it revises the full version every time.' },
   gen_card_jd:               { ar:'الوصف الوظيفي', en:'Job description' },
   match_analysis_title:      { ar:'تحليل التطابق', en:'Match Analysis' },
+  interview_prep_title:      { ar:'تحضير للمقابلة', en:'Interview Prep' },
+  interview_prep_intro:      { ar:'ولّد أسئلة متوقعة لهاي الوظيفة بالتحديد، مبنية على وصفها الوظيفي وعلى تقييم التطابق الصريح فوق — مع إرشاد كيف تجاوب مستنداً لخبراتك الحقيقية.', en:'Generate likely questions for this specific role, based on its description and the honest match assessment above — with guidance on how to answer using your real experience.' },
+  btn_generate_interview_prep: { ar:'ولّد تحضير المقابلة', en:'Generate Interview Prep' },
+  btn_regenerate_interview_prep: { ar:'أعد التوليد', en:'Regenerate' },
+  msg_building_interview_prep: { ar:'جاري تجهيز أسئلة وإرشادات المقابلة...', en:'Preparing interview questions and guidance...' },
+  label_likely_questions:    { ar:'أسئلة متوقعة', en:'Likely Questions' },
+  label_strengths_highlight: { ar:'نقاط قوة تبرزها', en:'Strengths to Highlight' },
+  label_weak_points:         { ar:'نقاط ممكن يسألوك عنها', en:'Points They Might Question' },
+  label_questions_to_ask:    { ar:'أسئلة تسألها للمقابل', en:'Questions to Ask' },
   jd_summary_label:          { ar:'ملخص الوصف الوظيفي', en:'Job Description Summary' },
   honest_verdict_label:      { ar:'التقييم الصريح', en:'Honest Verdict' },
   label_jd:                  { ar:'الصق الوصف الوظيفي كامل', en:'Paste the full job description' },
@@ -1028,7 +1195,7 @@ const I18N = {
   style_pro_desc:            { ar:'هيدر مميز بلون، تنسيق أوضح', en:'Distinct colored header, clearer formatting' },
   result_cv_title:           { ar:'السيرة الذاتية', en:'CV' },
   result_letter_title:       { ar:'Cover Letter', en:'Cover Letter' },
-  btn_download_pdf:          { ar:'طباعة / حفظ PDF', en:'Print / Save as PDF' },
+  btn_download_pdf:          { ar:'حفظ PDF', en:'Save as PDF' },
   btn_manual_edit:           { ar:'تعديل يدوي', en:'Manual edit' },
   btn_move_up:               { ar:'▲ فوق', en:'▲ Up' },
   btn_move_down:             { ar:'▼ تحت', en:'▼ Down' },
@@ -1892,6 +2059,132 @@ const INITIAL_SCHEMA = {
   additionalProperties:false
 };
 
+/* =====================================================================
+   INTERVIEW PREP — separate, on-demand, single-shot generation grounded
+   in the same database, job description, and the honest match assessment
+   already computed for this role. Not part of the iterative CV chat.
+   ===================================================================== */
+const INTERVIEW_PREP_SCHEMA = {
+  type:'object',
+  properties:{
+    likelyQuestions:{ type:'array', items:{
+      type:'object',
+      properties:{
+        question:{type:'string'},
+        category:{type:'string'},
+        guidance:{type:'string'}
+      },
+      required:['question','category','guidance'], additionalProperties:false
+    }},
+    strengthsToHighlight:{ type:'array', items:{type:'string'} },
+    weakPointsToAddress:{ type:'array', items:{
+      type:'object',
+      properties:{
+        concern:{type:'string'},
+        howToAddress:{type:'string'}
+      },
+      required:['concern','howToAddress'], additionalProperties:false
+    }},
+    questionsToAsk:{ type:'array', items:{type:'string'} }
+  },
+  required:['likelyQuestions','strengthsToHighlight','weakPointsToAddress','questionsToAsk'],
+  additionalProperties:false
+};
+
+const INTERVIEW_PREP_SYSTEM_PROMPT = `You are an expert interview coach helping a candidate prepare for a real job interview. You will be given the candidate's full truthful experience database, the target job description, and an honest assessment already computed for how well they match this role, including its identified gaps. Produce realistic interview preparation material.
+
+Rules:
+- Use ONLY real experience, skills, and facts present in the candidate's database. Never invent achievements, metrics, or experience not present there.
+- Generate realistic, role-specific interview questions a hiring manager would plausibly ask for THIS exact role — mix behavioral, technical or role-specific, and situational questions ("category" should be a short label like "Behavioral", "Technical", or "Situational"). Avoid generic filler; ground questions in what the job description actually emphasizes.
+- For each question's "guidance", briefly note which of the candidate's real experiences or achievements would make the strongest answer, and why.
+- For "strengthsToHighlight", list specific real talking points grounded in the database that map well to what this job values.
+- For "weakPointsToAddress", directly reflect the honest match assessment provided below — identify the specific concerns an interviewer would likely probe given those gaps, and for each, suggest an honest, non-defensive way to address it using real transferable experience. Do not suggest deflecting, minimizing, or being evasive about genuine gaps — suggest honest framing instead.
+- For "questionsToAsk", suggest a few genuinely useful, specific questions the candidate could ask the interviewer, grounded in details from the job description.
+- All content must be written in English, since the actual interview will be conducted in English.
+- Output ONLY the JSON matching the schema.`;
+
+async function handleGenerateInterviewPrep(){
+  if(!state.chatSession) return;
+  if(!state.apiKey){ showStatus('interviewStatus','error', t('msg_need_api_key_tab')); return; }
+  const btn = document.getElementById('generateInterviewBtn');
+  btn.disabled = true;
+  showStatus('interviewStatus','info','<div class="spinner"></div> ' + t('msg_building_interview_prep'));
+  try{
+    const userPrompt = 'Before generating the interview prep, use the web_search tool to search for real interview questions commonly asked for this type of role (use the job title and key skills from the job description as search terms). Then combine what you find with your own expertise to produce the most realistic, role-specific prep material possible.\n\nCANDIDATE DATABASE (JSON, ground truth):\n' + JSON.stringify(state.db) +
+      '\n\nTARGET JOB DESCRIPTION:\n' + state.chatSession.jobDescription +
+      '\n\nHONEST MATCH ASSESSMENT ALREADY COMPUTED FOR THIS ROLE:\n' + JSON.stringify(state.chatSession.matchAnalysis);
+
+    const res = await fetch(OPENAI_ENDPOINT, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + state.apiKey },
+      body: JSON.stringify({
+        model: state.model,
+        input: [
+          { role:'system', content: INTERVIEW_PREP_SYSTEM_PROMPT },
+          { role:'user', content: userPrompt }
+        ],
+        tools: [{ type:'web_search_preview' }],
+        text: { format: { type:'json_schema', name:'interview_prep', schema: INTERVIEW_PREP_SCHEMA, strict: true } }
+      })
+    });
+    if(!res.ok){
+      let msg = 'HTTP ' + res.status;
+      try{ const errBody = await res.json(); if(errBody?.error?.message) msg = errBody.error.message; }catch(e){}
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    const message = (data.output || []).find(item => item.type === 'message');
+    if(!message) throw new Error(t('err_no_model_reply'));
+    const textPart = (message.content || []).find(c => c.type === 'output_text');
+    if(!textPart) throw new Error(t('err_no_text_content'));
+    const result = JSON.parse(textPart.text);
+
+    state.chatSession.interviewPrep = result;
+    saveState();
+    renderInterviewPrep();
+    btn.textContent = t('btn_regenerate_interview_prep');
+    hideStatus('interviewStatus');
+  }catch(err){
+    showStatus('interviewStatus','error', t('msg_error_prefix') + esc(err.message));
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function renderInterviewPrep(){
+  const prep = state.chatSession && state.chatSession.interviewPrep;
+  const container = document.getElementById('interviewPrepContent');
+  if(!prep){ container.style.display = 'none'; container.innerHTML = ''; return; }
+  container.style.display = 'block';
+
+  let html = '<div class="interview-section-label">' + esc(t('label_likely_questions')) + '</div>';
+  (prep.likelyQuestions||[]).forEach(q=>{
+    html += '<div class="interview-question-card">'
+      + '<div class="interview-question-cat">' + esc(q.category) + '</div>'
+      + '<div class="interview-question-text">' + esc(q.question) + '</div>'
+      + '<div class="interview-question-guidance">' + esc(q.guidance) + '</div>'
+      + '</div>';
+  });
+
+  html += '<div class="interview-section-label" style="margin-top:20px;">' + esc(t('label_strengths_highlight')) + '</div><ul class="interview-list">';
+  (prep.strengthsToHighlight||[]).forEach(s=>{ html += '<li>' + esc(s) + '</li>'; });
+  html += '</ul>';
+
+  html += '<div class="interview-section-label" style="margin-top:20px;">' + esc(t('label_weak_points')) + '</div>';
+  (prep.weakPointsToAddress||[]).forEach(w=>{
+    html += '<div class="interview-weakpoint-card">'
+      + '<div class="interview-weakpoint-concern">' + esc(w.concern) + '</div>'
+      + '<div class="interview-weakpoint-answer">' + esc(w.howToAddress) + '</div>'
+      + '</div>';
+  });
+
+  html += '<div class="interview-section-label" style="margin-top:20px;">' + esc(t('label_questions_to_ask')) + '</div><ul class="interview-list">';
+  (prep.questionsToAsk||[]).forEach(q=>{ html += '<li>' + esc(q) + '</li>'; });
+  html += '</ul>';
+
+  container.innerHTML = html;
+}
+
 function buildChatSystemPrompt(includeMatchAnalysis){
   const replyLanguageName = state.lang === 'en' ? 'English' : 'Arabic';
   let prompt = `You are an expert resume writer and career strategist helping a candidate whose real experience spans multiple distinct professional domains. You are in an ongoing conversation with the candidate: they gave you a job description and their experience database once (in the first user message), and from now on they will send you follow-up feedback and direction to refine the CV and cover letter. Every time you reply, output the complete, current best version of the tailored CV and cover letter reflecting ALL guidance given so far in the conversation — never a partial diff.
@@ -1963,6 +2256,7 @@ async function startChatSession(){
     renderChat();
     renderResultsFromChat();
     renderMatchAnalysis();
+    updateStarButton();
     hideStatus('generateStatus');
   }catch(err){
     state.chatSession = null;
@@ -2010,6 +2304,9 @@ function initGenerateTab(){
     document.getElementById('cvPreview').classList.remove('editing');
     document.getElementById('letterPreview').classList.remove('editing');
     document.getElementById('matchAnalysisCard').style.display = 'none';
+    document.getElementById('interviewPrepContent').style.display = 'none';
+    document.getElementById('generateInterviewBtn').textContent = t('btn_generate_interview_prep');
+    hideStatus('interviewStatus');
     saveState();
     document.getElementById('jobDescArea').value = '';
     document.getElementById('resultsWrap').style.display = 'none';
@@ -2021,6 +2318,7 @@ function initGenerateTab(){
   document.getElementById('editLetterBtn').addEventListener('click', toggleLetterEdit);
   document.getElementById('downloadCvBtn').addEventListener('click', ()=> exportPdf('cv'));
   document.getElementById('downloadLetterBtn').addEventListener('click', ()=> exportPdf('letter'));
+  document.getElementById('generateInterviewBtn').addEventListener('click', handleGenerateInterviewPrep);
 
   const chatInput = document.getElementById('chatInput');
   const sendFromInput = ()=>{
@@ -2040,6 +2338,10 @@ function initGenerateTab(){
     renderChat();
     renderResultsFromChat();
     renderMatchAnalysis();
+    if(state.chatSession.interviewPrep){
+      renderInterviewPrep();
+      document.getElementById('generateInterviewBtn').textContent = t('btn_regenerate_interview_prep');
+    }
   }
 }
 
@@ -2451,47 +2753,253 @@ function buildLetterHtml(cv, letter, style){
   </div>`;
 }
 
-/* --------------------------- PDF export (native browser print) --------------------------- */
-function waitTwoFrames(){
-  return new Promise(resolve=>{
-    requestAnimationFrame(()=> requestAnimationFrame(resolve));
-  });
+/* --------------------------- PDF export (dedicated print window) --------------------------- */
+function getPdfStyles(){
+  return `
+    @page { margin: 14mm 16mm; }
+    body { margin: 0; padding: 0; background: #fff; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+    .pdf-doc { width: 100%; max-width: 100%; color: #1a1a1a; font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow-wrap: break-word; word-wrap: break-word; }
+    .pdf-doc * { box-sizing: border-box; max-width: 100%; }
+    .pdf-doc h1,.pdf-doc h2,.pdf-doc h3 { font-family: 'IBM Plex Sans', system-ui, sans-serif; margin: 0; }
+    .pdf-simple { padding: 10px 0; }
+    .pdf-simple .name { font-family: Georgia, serif; font-size: 26px; font-weight: 700; color: #161A21; }
+    .pdf-simple .headline { font-size: 12.5px; color: #48586C; margin-top: 3px; }
+    .pdf-simple .contact { font-size: 10.5px; color: #555; margin-top: 8px; }
+    .pdf-simple .contact span { margin-right: 12px; }
+    .pdf-simple hr { border: none; border-top: 1.5px solid #1a1a1a; margin: 14px 0 16px; }
+    .pdf-simple .sec-title { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; color: #161A21; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin: 18px 0 10px; }
+    .pdf-simple .sec-title:first-of-type { margin-top: 0; }
+    .pdf-simple .entry { margin-bottom: 12px; break-inside: avoid; }
+    .pdf-simple .entry-top { display: flex; justify-content: space-between; font-size: 12.5px; gap: 12px; }
+    .pdf-simple .entry-title { font-weight: 700; min-width: 0; }
+    .pdf-simple .entry-org { font-weight: 400; color: #333; }
+    .pdf-simple .entry-date { font-size: 10.5px; color: #666; white-space: nowrap; flex-shrink: 0; }
+    .pdf-simple .entry ul { margin: 4px 0 0; padding-left: 16px; font-size: 11.5px; color: #222; }
+    .pdf-simple .entry li { margin-bottom: 3px; line-height: 1.5; }
+    .pdf-simple .summary-text { font-size: 12px; color: #222; line-height: 1.6; }
+    .pdf-simple .skills-line { font-size: 11.5px; color: #222; line-height: 1.7; }
+    .pdf-simple .skills-line b { color: #161A21; }
+    .pdf-pro-band { background: #252B35; color: #EDE7DA; padding: 30px 36px 22px; }
+    .pdf-pro-band .name { font-family: Georgia, serif; font-size: 28px; font-weight: 700; color: #fff; }
+    .pdf-pro-band .headline { font-size: 13px; color: #E3C182; margin-top: 4px; }
+    .pdf-pro-band .contact { font-size: 10px; color: #C9C3B4; margin-top: 10px; }
+    .pdf-pro-band .contact span { margin-right: 12px; }
+    .pdf-pro-body { padding: 22px 36px 36px; }
+    .pdf-pro-body .sec-title { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; color: #48586C; border-bottom: 1.5px solid #6E88A6; padding-bottom: 4px; margin: 20px 0 10px; }
+    .pdf-pro-body .sec-title:first-of-type { margin-top: 0; }
+    .pdf-pro-body .entry { margin-bottom: 12px; break-inside: avoid; }
+    .pdf-pro-body .entry-top { display: flex; justify-content: space-between; font-size: 12.5px; gap: 12px; }
+    .pdf-pro-body .entry-title { font-weight: 700; color: #161A21; min-width: 0; }
+    .pdf-pro-body .entry-org { font-weight: 400; color: #333; }
+    .pdf-pro-body .entry-date { font-size: 10.5px; color: #666; white-space: nowrap; flex-shrink: 0; }
+    .pdf-pro-body .entry ul { margin: 4px 0 0; padding-left: 16px; font-size: 11.5px; color: #222; }
+    .pdf-pro-body .entry li { margin-bottom: 3px; line-height: 1.5; }
+    .pdf-pro-body .summary-text { font-size: 12px; color: #222; line-height: 1.6; }
+    .pdf-pro-body .skill-chip { display: inline-block; font-size: 10.5px; border: 1px solid #C99A4B; color: #8F6B2E; border-radius: 20px; padding: 3px 10px; margin: 0 4px 5px 0; }
+    .pdf-letter-body { padding: 10px 0; }
+    .pdf-letter-body .date { font-size: 11.5px; color: #555; margin-bottom: 20px; }
+    .pdf-letter-body .salutation { font-size: 12.5px; margin-bottom: 12px; font-weight: 600; }
+    .pdf-letter-body p { font-size: 12px; line-height: 1.75; color: #222; margin: 0 0 12px; }
+    .pdf-letter-body .closing { margin-top: 18px; }
+    .pdf-letter-body .closing .name { font-family: Georgia, serif; font-size: 14px; font-weight: 700; margin-top: 24px; color: #161A21; }
+  `;
 }
 
-async function exportPdf(kind){
+function exportPdf(kind){
   if(kind === 'cv' && ui.cvDraft) saveCvEdit();
   if(kind === 'letter' && ui.letterDraft) saveLetterEdit();
   const r = getLatestResult();
   if(!r) return;
-  const btn = document.getElementById(kind === 'cv' ? 'downloadCvBtn' : 'downloadLetterBtn');
-  const stage = document.getElementById('pdfStage');
   const html = (kind === 'cv') ? buildCvHtml(r.tailoredCV, ui.pdfStyle) : buildLetterHtml(r.tailoredCV, r.coverLetter, ui.pdfStyle);
-  stage.innerHTML = html;
   const safeName = (r.tailoredCV.fullName || 'candidate').replace(/[^a-zA-Z0-9]+/g,'_');
-  const originalTitle = document.title;
-  document.title = (kind === 'cv' ? safeName+'_CV' : safeName+'_Cover_Letter'); // Chrome/Edge use this as the suggested filename in the print dialog's Save-as-PDF
+  const title = (kind === 'cv' ? safeName+'_CV' : safeName+'_Cover_Letter');
 
-  btn.disabled = true;
-  const originalLabel = btn.textContent;
-  btn.textContent = t('msg_preparing_pdf');
-
-  const restore = ()=>{
-    stage.innerHTML = '';
-    document.title = originalTitle;
-    btn.disabled = false;
-    btn.textContent = originalLabel;
-    window.removeEventListener('afterprint', restore);
-  };
-  window.addEventListener('afterprint', restore);
-
-  try{
-    if(document.fonts && document.fonts.ready){ await document.fonts.ready; } // avoid printing before web fonts finish swapping in
-    await waitTwoFrames();
-    window.print();
-  }catch(err){
-    showStatus('generateStatus','error', t('msg_pdf_export_failed') + esc(err.message || String(err)));
-    restore();
+  const printWin = window.open('', '_blank');
+  if(!printWin){
+    showStatus('generateStatus','error', t('msg_pdf_export_failed') + 'Popup blocked. Allow popups for this site and try again.');
+    return;
   }
+
+  printWin.document.write('<!DOCTYPE html><html lang="en" dir="ltr"><head><meta charset="UTF-8">'
+    + '<title>' + esc(title) + '</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">'
+    + '<style>' + getPdfStyles() + '</style>'
+    + '</head><body>' + html
+    + '<scr' + 'ipt>'
+    + 'document.fonts.ready.then(function(){ setTimeout(function(){ window.print(); }, 400); });'
+    + '</scr' + 'ipt></body></html>');
+  printWin.document.close();
+}
+
+/* =====================================================================
+   SAVED JOBS — persisted separately from chatSession (which holds the
+   *active* session), under their own localStorage key. Each saved job
+   is a self-contained snapshot that can be restored into chatSession.
+   ===================================================================== */
+const SAVED_JOBS_KEY = 'cvArchiveSavedJobs_v1';
+
+function loadSavedJobs(){
+  try{
+    const raw = localStorage.getItem(SAVED_JOBS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+
+function persistSavedJobs(jobs){
+  try{ localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify(jobs)); }catch(e){ console.error('persistSavedJobs failed', e); }
+}
+
+function isCurrentJobSaved(){
+  if(!state.chatSession) return false;
+  const jobs = loadSavedJobs();
+  const jd = state.chatSession.jobDescription;
+  return jobs.some(j=> j.jobDescription === jd);
+}
+
+function toggleSaveCurrentJob(){
+  if(!state.chatSession) return;
+  // allow saving even without matchAnalysis (star should always work once there's a session)
+  const jobs = loadSavedJobs();
+  const jd = state.chatSession.jobDescription;
+  const existingIdx = jobs.findIndex(j=> j.jobDescription === jd);
+
+  // if already saved → unsave on click
+  if(existingIdx >= 0){
+    jobs.splice(existingIdx, 1);
+    persistSavedJobs(jobs);
+    updateStarButton();
+    renderSavedJobsList();
+    showStatus('generateStatus','info', t('msg_job_unsaved'));
+    return;
+  }
+
+  // not yet saved → show the naming modal
+  const r = getLatestResult();
+  const defaultName = r ? r.matchedDomain : '';
+  const input = document.getElementById('saveJobNameInput');
+  input.value = defaultName;
+  document.getElementById('saveJobModal').classList.add('show');
+  input.focus();
+}
+
+function confirmSaveJob(){
+  const input = document.getElementById('saveJobNameInput');
+  const name = input.value.trim() || (getLatestResult() ? getLatestResult().matchedDomain : 'Untitled');
+  document.getElementById('saveJobModal').classList.remove('show');
+
+  const jobs = loadSavedJobs();
+  const r = getLatestResult();
+  const ma = state.chatSession.matchAnalysis;
+  jobs.unshift({
+    savedAt: new Date().toISOString(),
+    customName: name,
+    jobDescription: state.chatSession.jobDescription,
+    matchAnalysis: ma || null,
+    matchedDomain: r ? r.matchedDomain : '',
+    turns: state.chatSession.turns,
+    interviewPrep: state.chatSession.interviewPrep || null,
+    jdSnippet: state.chatSession.jobDescription.slice(0, 120).replace(/\s+/g,' ')
+  });
+  persistSavedJobs(jobs);
+  updateStarButton();
+  renderSavedJobsList();
+  showStatus('generateStatus','success', t('msg_job_saved'));
+}
+
+function cancelSaveJob(){
+  document.getElementById('saveJobModal').classList.remove('show');
+}
+
+function updateStarButton(){
+  const btn = document.getElementById('saveJobBtn');
+  if(!btn) return;
+  const saved = isCurrentJobSaved();
+  btn.textContent = saved ? '★' : '☆';
+  btn.classList.toggle('starred', saved);
+}
+
+function restoreSavedJob(index){
+  const jobs = loadSavedJobs();
+  const job = jobs[index];
+  if(!job) return;
+  state.chatSession = {
+    jobDescription: job.jobDescription,
+    matchAnalysis: job.matchAnalysis,
+    turns: job.turns,
+    interviewPrep: job.interviewPrep || null
+  };
+  saveState();
+  // switch to generate tab
+  document.querySelectorAll('.rail-tab').forEach(el=> el.classList.toggle('active', el.getAttribute('data-tab') === 'generate'));
+  document.querySelectorAll('.panel').forEach(p=> p.classList.toggle('active', p.id === 'panel-generate'));
+  document.getElementById('jobDescArea').value = job.jobDescription;
+  renderChat();
+  renderResultsFromChat();
+  renderMatchAnalysis();
+  updateStarButton();
+  if(job.interviewPrep){
+    renderInterviewPrep();
+    document.getElementById('generateInterviewBtn').textContent = t('btn_regenerate_interview_prep');
+  }
+  showStatus('generateStatus','success', t('msg_job_restored'));
+}
+
+function deleteSavedJob(index){
+  if(!confirm(t('msg_delete_saved_confirm'))) return;
+  const jobs = loadSavedJobs();
+  jobs.splice(index, 1);
+  persistSavedJobs(jobs);
+  renderSavedJobsList();
+  updateStarButton();
+}
+
+function renderSavedJobsList(){
+  const container = document.getElementById('savedJobsList');
+  if(!container) return;
+  const jobs = loadSavedJobs();
+  if(jobs.length === 0){
+    container.innerHTML = '<div class="empty-note">' + esc(t('saved_empty')) + '</div>';
+    return;
+  }
+  container.innerHTML = jobs.map((job, i)=>{
+    const pct = job.matchAnalysis ? job.matchAnalysis.matchPercentage : '?';
+    const pctColor = pct >= 70 ? 'var(--good-300)' : pct >= 40 ? 'var(--paper-300)' : 'var(--bad-300)';
+    const dateStr = job.savedAt ? new Date(job.savedAt).toLocaleDateString() : '';
+    const displayName = job.customName || job.matchedDomain || job.jdSnippet || '';
+    return `<div class="saved-job-card">
+      <div class="saved-job-info">
+        <div class="saved-job-domain">${esc(job.matchedDomain || '')}</div>
+        <div class="saved-job-title">${esc(displayName)}</div>
+        <div class="saved-job-match" style="color:${pctColor};">${pct}% ${t('match_analysis_title').toLowerCase()}</div>
+        <div class="saved-job-date">${esc(dateStr)}</div>
+      </div>
+      <div class="saved-job-actions">
+        <button class="btn btn-ghost btn-sm" onclick="restoreSavedJob(${i})">${esc(t('btn_restore'))}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSavedJob(${i})">${esc(t('btn_delete'))}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* =====================================================================
+   LANDING PAGE — shown once (or on first visit), then hidden on click.
+   ===================================================================== */
+function initLandingPage(){
+  const landing = document.getElementById('landingPage');
+  const appShell = document.querySelector('.app-shell');
+  const visited = localStorage.getItem('cvArchiveVisited');
+  if(visited){
+    landing.classList.add('hidden');
+    appShell.style.display = 'flex';
+  }else{
+    landing.classList.remove('hidden');
+    appShell.style.display = 'none';
+  }
+  document.getElementById('landingStartBtn').addEventListener('click', ()=>{
+    landing.classList.add('hidden');
+    appShell.style.display = 'flex';
+    localStorage.setItem('cvArchiveVisited', '1');
+  });
 }
 
 /* =====================================================================
@@ -2512,6 +3020,12 @@ function boot(){
   initSettingsTab();
   initDatabaseTab();
   initGenerateTab();
+  document.getElementById('saveJobBtn').addEventListener('click', toggleSaveCurrentJob);
+  document.getElementById('saveJobConfirmBtn').addEventListener('click', confirmSaveJob);
+  document.getElementById('saveJobCancelBtn').addEventListener('click', cancelSaveJob);
+  document.getElementById('saveJobNameInput').addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); confirmSaveJob(); } });
+  renderSavedJobsList();
+  initLandingPage();
 }
 document.addEventListener('DOMContentLoaded', boot);
 </script>
