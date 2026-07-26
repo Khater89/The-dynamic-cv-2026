@@ -1034,7 +1034,7 @@ input[type=color]::-webkit-color-swatch{border-radius:5px;border:none;}
 const STORAGE_KEY = 'cvArchiveState_v1';
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/responses';
 const OPENAI_EMBEDDINGS_ENDPOINT = 'https://api.openai.com/v1/embeddings';
-const EMBEDDING_MODEL = 'text-embedding-3-small';
+const EMBEDDING_MODEL = 'text-embedding-3-large';
 const EMBEDDINGS_STORAGE_KEY = 'cvArchiveEmbeddings_v1';
 const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_THEME_COLOR = '#5E82D6';
@@ -1646,59 +1646,108 @@ async function callOpenAI(apiKey, model, systemPrompt, userPrompt, jsonSchema, s
 function chunkDatabase(db){
   const chunks = [];
   let id = 0;
-  const add = (text, meta) => { if(text && text.trim()) chunks.push({ id: id++, text: text.trim(), meta }); };
+  const add = (text, meta) => { if(text && text.trim().length > 5) chunks.push({ id: id++, text: text.trim(), meta }); };
 
-  // personal summary
-  if(db.personalInfo && db.personalInfo.summary){
-    add(db.personalInfo.summary, { type:'summary', source:'Personal Summary' });
-  }
-
-  // work experience — each bullet is a separate chunk for granular matching
+  /* ---- LEVEL 1: Contextual Achievement Tokens ----
+     Each bullet point embedded WITH its full role context, so
+     "Improved efficiency by 15%" becomes "As Vendor & Resource
+     Allocation Coordinator at Acuative (Dispatch Operations,
+     2023-2024): Improved vendor response efficiency by 15%..."
+     This is the most critical fix — isolated bullets lose meaning. */
   (db.workExperience || []).forEach(we => {
-    const src = (we.title || '') + ' at ' + (we.company || '');
-    const period = [we.startDate, we.endDate].filter(Boolean).join('–');
-    // role-level chunk (title + company + domain + techs)
-    add([we.title, we.company, we.domainTag, (we.technologies||[]).join(', ')].filter(Boolean).join(' | '),
-      { type:'role', source:src, period, domainTag: we.domainTag||'' });
-    // each bullet separately
+    const role = we.title || '';
+    const company = we.company || '';
+    const domain = we.domainTag || '';
+    const period = [we.startDate, we.isCurrent?'Present':we.endDate].filter(Boolean).join('–');
+    const techs = (we.technologies||[]).join(', ');
+    const roleCtx = `As ${role} at ${company}` + (domain ? ` (${domain})` : '') + (period ? `, ${period}` : '');
+
+    // role-level summary token
+    const roleSummary = [role, company, domain, period, techs ? 'Technologies: '+techs : ''].filter(Boolean).join(' | ');
+    add(roleSummary, { type:'role_summary', source: role+' at '+company, period, domain });
+
+    // each bullet WITH role context prepended
     (we.bullets || []).forEach(b => {
-      add(b, { type:'achievement', source:src, period, domainTag: we.domainTag||'' });
+      add(roleCtx + ': ' + b, { type:'achievement', source: role+' at '+company, period, domain });
+    });
+
+    // technology-role cross-reference
+    if(techs){
+      add(`Tools and technologies used as ${role} at ${company}: ${techs}`, { type:'tech_crossref', source: role+' at '+company, period, domain });
+    }
+  });
+
+  /* ---- LEVEL 2: Domain Summary Tokens ----
+     Aggregate all experience per domain tag into one rich token,
+     so "Dispatch Operations" gets a single token summarizing ALL
+     dispatch-related roles, achievements, and tools across the career. */
+  const domainMap = {};
+  (db.workExperience || []).forEach(we => {
+    const d = we.domainTag || 'General';
+    if(!domainMap[d]) domainMap[d] = { roles:[], bullets:[], techs:new Set() };
+    domainMap[d].roles.push((we.title||'') + ' at ' + (we.company||''));
+    (we.bullets||[]).forEach(b => domainMap[d].bullets.push(b));
+    (we.technologies||[]).forEach(t2 => domainMap[d].techs.add(t2));
+  });
+  Object.keys(domainMap).forEach(domain => {
+    const d = domainMap[domain];
+    const summary = `Domain: ${domain}. Roles: ${d.roles.join('; ')}. Key achievements: ${d.bullets.slice(0,5).join('; ')}. Technologies: ${[...d.techs].join(', ')}.`;
+    add(summary, { type:'domain_summary', source: domain, domain });
+  });
+
+  /* ---- LEVEL 3: Skill-Experience Cross-Reference Tokens ----
+     Each skill category linked to WHERE it was demonstrated. */
+  (db.skills || []).forEach(sk => {
+    const cat = sk.category || 'Skills';
+    const items = (sk.items||[]).join(', ');
+    // find which roles used these skills (by checking technology overlap)
+    const relatedRoles = (db.workExperience||[])
+      .filter(we => (we.technologies||[]).some(t2 => (sk.items||[]).some(s => t2.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(t2.toLowerCase()))))
+      .map(we => we.title + ' at ' + we.company);
+    const ctx = relatedRoles.length > 0 ? ` — demonstrated in: ${relatedRoles.join('; ')}` : '';
+    add(`${cat}: ${items}${ctx}`, { type:'skill_crossref', source: cat });
+  });
+
+  /* ---- LEVEL 4: Competency Tokens ----
+     Extract quantified achievements (with numbers/percentages)
+     and create standalone competency tokens with full context. */
+  (db.workExperience || []).forEach(we => {
+    const role = we.title || '';
+    const company = we.company || '';
+    (we.bullets || []).forEach(b => {
+      if(/\d+%|\d+\s*(technicians|team|staff|clients|vendors|projects)/i.test(b)){
+        add(`Quantified achievement as ${role} at ${company}: ${b}`, { type:'competency', source: role+' at '+company, domain: we.domainTag||'' });
+      }
     });
   });
 
-  // education
+  /* ---- LEVEL 5: Education, Certifications, Projects, Languages ---- */
   (db.education || []).forEach(ed => {
-    add([ed.degree, ed.field, ed.institution].filter(Boolean).join(' — '),
+    add([ed.degree, ed.field ? 'in '+ed.field : '', ed.institution ? 'from '+ed.institution : '', ed.endDate||''].filter(Boolean).join(' '),
       { type:'education', source: ed.institution||'' });
-    if(ed.details) add(ed.details, { type:'education_detail', source: ed.institution||'' });
   });
 
-  // skills — each category as one chunk
-  (db.skills || []).forEach(sk => {
-    add((sk.category||'Skills') + ': ' + (sk.items||[]).join(', '),
-      { type:'skills', source: sk.category||'Skills' });
-  });
-
-  // certifications
   (db.certifications || []).forEach(cert => {
-    add([cert.name, cert.issuer, cert.date].filter(Boolean).join(' — '),
+    add('Certification: ' + [cert.name, cert.issuer ? 'by '+cert.issuer : '', cert.date||''].filter(Boolean).join(' '),
       { type:'certification', source: cert.name||'' });
   });
 
-  // projects — each bullet separately
   (db.projects || []).forEach(proj => {
-    add([proj.name, proj.domainTag, proj.role, (proj.technologies||[]).join(', ')].filter(Boolean).join(' | '),
-      { type:'project', source: proj.name||'', domainTag: proj.domainTag||'' });
+    const projCtx = 'Project: ' + (proj.name||'') + (proj.domainTag ? ' ('+proj.domainTag+')' : '') + (proj.role ? ', Role: '+proj.role : '');
+    const techs = (proj.technologies||[]).join(', ');
+    add(projCtx + (techs ? '. Technologies: '+techs : ''), { type:'project', source: proj.name||'', domain: proj.domainTag||'' });
     (proj.bullets || []).forEach(b => {
-      add(b, { type:'project_detail', source: proj.name||'', domainTag: proj.domainTag||'' });
+      add(projCtx + ': ' + b, { type:'project_achievement', source: proj.name||'', domain: proj.domainTag||'' });
     });
   });
 
-  // languages
   (db.languages || []).forEach(lang => {
-    add(lang.language + ': ' + (lang.proficiency||''),
-      { type:'language', source: lang.language||'' });
+    add('Language: ' + lang.language + ' — ' + (lang.proficiency||''), { type:'language', source: lang.language||'' });
   });
+
+  if(db.personalInfo && db.personalInfo.summary){
+    add('Professional Summary: ' + db.personalInfo.summary, { type:'summary', source:'Personal Summary' });
+  }
 
   return chunks;
 }
@@ -1764,30 +1813,37 @@ function cosineSimilarity(a, b){
 async function semanticSearch(jdText, topK){
   let stored = loadStoredEmbeddings();
   if(!stored || stored.length === 0){
-    // embeddings not generated yet — generate now
     stored = await generateAndStoreEmbeddings();
   }
   if(!stored || stored.length === 0) return [];
 
-  // embed the JD
   const jdEmbeddings = await callEmbeddingsAPI(state.apiKey, [jdText]);
   const jdVector = jdEmbeddings[0];
 
-  // compute similarities
   const scored = stored.map(entry => ({
     ...entry,
     score: cosineSimilarity(jdVector, entry.vector)
   }));
-
-  // sort descending by score
   scored.sort((a, b) => b.score - a.score);
 
-  // return top K, but also ensure we don't miss critical metadata (personal info)
-  return scored.slice(0, topK || 30);
+  const K = topK || 50;
+  const MIN_SCORE = 0.20;
+  const primary = scored.filter(s => s.score >= MIN_SCORE).slice(0, K);
+
+  // diversity: ensure at least one token from each important type
+  const importantTypes = ['role_summary','domain_summary','skill_crossref','education','certification','competency'];
+  const presentTypes = new Set(primary.map(p => p.meta.type));
+  importantTypes.forEach(type => {
+    if(!presentTypes.has(type)){
+      const best = scored.find(s => s.meta.type === type);
+      if(best) primary.push(best);
+    }
+  });
+  primary.sort((a, b) => b.score - a.score);
+  return primary;
 }
 
 function formatRetrievedContext(matches){
-  // group by type for clearer context presentation to the generative model
   const groups = {};
   matches.forEach(m => {
     const key = m.meta.type;
@@ -1796,14 +1852,21 @@ function formatRetrievedContext(matches){
   });
 
   let text = '';
-  const order = ['role','achievement','skills','project','project_detail','certification','education','education_detail','summary','language'];
+  const order = ['domain_summary','role_summary','achievement','competency','tech_crossref','skill_crossref','project','project_achievement','certification','education','summary','language'];
   order.forEach(type => {
     if(!groups[type]) return;
-    text += '\n[' + type.toUpperCase() + ']\n';
+    const label = type.replace(/_/g,' ').toUpperCase();
+    text += '\n[' + label + ']\n';
     groups[type].forEach(m => {
-      const srcInfo = m.meta.source ? ' (from: ' + m.meta.source + (m.meta.period ? ', ' + m.meta.period : '') + ')' : '';
-      text += '• ' + m.text + srcInfo + ' [similarity: ' + (m.score * 100).toFixed(1) + '%]\n';
+      text += '• ' + m.text + ' [sim: ' + (m.score * 100).toFixed(0) + '%]\n';
     });
+  });
+  // catch any types not in the order list
+  Object.keys(groups).forEach(type => {
+    if(!order.includes(type)){
+      text += '\n[' + type.toUpperCase() + ']\n';
+      groups[type].forEach(m => { text += '• ' + m.text + ' [sim: ' + (m.score * 100).toFixed(0) + '%]\n'; });
+    }
   });
   return text;
 }
