@@ -487,6 +487,9 @@ input:focus,textarea:focus,select:focus{
 .match-sub-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent2-300);margin-bottom:6px;}
 .match-sub-block p{font-size:13.5px;color:var(--paper-300);line-height:1.65;margin:0;}
 
+/* ============================= OUTREACH MESSAGE ============================= */
+.outreach-ch-btn.selected{background:var(--accent-500);color:#fff;border-color:var(--accent-500);}
+
 /* ============================= INTERVIEW PREP ============================= */
 .interview-section-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent2-300);margin-bottom:10px;}
 .interview-question-card{background:var(--ink-750);border:1px solid var(--ink-700);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:10px;}
@@ -927,6 +930,34 @@ input[type=color]::-webkit-color-swatch{border-radius:5px;border:none;}
         </div>
 
         <div class="card">
+          <div class="card-title" data-i18n="outreach_card_title"></div>
+          <p style="font-size:13px;color:var(--paper-300);margin:0 0 14px;" data-i18n="outreach_card_intro"></p>
+          <div class="field">
+            <label data-i18n="outreach_channel_label"></label>
+            <div class="btn-row" id="outreachChannelBtns">
+              <button class="btn btn-ghost btn-sm outreach-ch-btn selected" data-channel="email" type="button">Email</button>
+              <button class="btn btn-ghost btn-sm outreach-ch-btn" data-channel="linkedin" type="button">LinkedIn</button>
+              <button class="btn btn-ghost btn-sm outreach-ch-btn" data-channel="whatsapp" type="button">WhatsApp</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="generateOutreachBtn" data-i18n="btn_generate_outreach"></button>
+          <div class="status" id="outreachStatus"></div>
+          <div id="outreachContent" style="display:none;margin-top:20px;">
+            <div class="item-card" id="outreachSubjectWrap" style="display:none;">
+              <div class="item-sub" data-i18n="outreach_subject_label" style="margin-bottom:6px;"></div>
+              <div class="item-title" id="outreachSubjectText"></div>
+            </div>
+            <div class="item-card">
+              <div id="outreachBodyText" dir="ltr" style="font-size:13.5px;line-height:1.7;color:var(--paper-300);white-space:pre-wrap;"></div>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-ghost btn-sm" id="copyOutreachBtn" data-i18n="btn_copy_outreach"></button>
+              <button class="btn btn-ghost btn-sm" id="regenerateOutreachBtn" data-i18n="btn_regenerate_outreach"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title" data-i18n="interview_prep_title"></div>
           <p style="font-size:13px;color:var(--paper-300);margin:0 0 14px;" data-i18n="interview_prep_intro"></p>
           <button class="btn btn-primary" id="generateInterviewBtn" data-i18n="btn_generate_interview_prep"></button>
@@ -1159,6 +1190,15 @@ const I18N = {
   gen_desc:                  { ar:'الصق الوصف الوظيفي، وبعد أول نسخة تقدر توجّه الموديل بالمحادثة — "ركّز أكتر على كذا"، "قصّر هيك"، "خلي اللهجة أرسمي" — وهو بيعدّل النسخة الكاملة كل مرة.', en:'Paste the job description, and after the first version you can guide the model through conversation — "focus more on X", "shorten this", "make the tone more formal" — it revises the full version every time.' },
   gen_card_jd:               { ar:'الوصف الوظيفي', en:'Job description' },
   match_analysis_title:      { ar:'تحليل التطابق', en:'Match Analysis' },
+  outreach_card_title:       { ar:'رسالة تقديم', en:'Outreach Message' },
+  outreach_card_intro:       { ar:'ولّد رسالة احترافية مختصرة ترسلها مع الـCV للمسؤول عن التوظيف — مخصصة للوظيفة ومبنية على خبراتك الحقيقية.', en:'Generate a short, professional message to send with your CV to the hiring contact — tailored to the role and grounded in your real experience.' },
+  outreach_channel_label:    { ar:'القناة', en:'Channel' },
+  btn_generate_outreach:     { ar:'ولّد الرسالة', en:'Generate Message' },
+  btn_copy_outreach:         { ar:'نسخ الرسالة', en:'Copy Message' },
+  btn_regenerate_outreach:   { ar:'إعادة توليد', en:'Regenerate' },
+  outreach_subject_label:    { ar:'عنوان الرسالة (Subject)', en:'Subject Line' },
+  msg_building_outreach:     { ar:'جاري كتابة الرسالة...', en:'Writing the message...' },
+  msg_outreach_copied:       { ar:'تم نسخ الرسالة ✓', en:'Message copied ✓' },
   interview_prep_title:      { ar:'تحضير للمقابلة', en:'Interview Prep' },
   interview_prep_intro:      { ar:'ولّد أسئلة متوقعة لهاي الوظيفة بالتحديد، مبنية على وصفها الوظيفي وعلى تقييم التطابق الصريح فوق — مع إرشاد كيف تجاوب مستنداً لخبراتك الحقيقية.', en:'Generate likely questions for this specific role, based on its description and the honest match assessment above — with guidance on how to answer using your real experience.' },
   btn_generate_interview_prep: { ar:'ولّد تحضير المقابلة', en:'Generate Interview Prep' },
@@ -2060,6 +2100,101 @@ const INITIAL_SCHEMA = {
 };
 
 /* =====================================================================
+   OUTREACH MESSAGE — short professional message to accompany the CV
+   when reaching out to a recruiter or hiring manager.
+   ===================================================================== */
+const OUTREACH_SCHEMA = {
+  type:'object',
+  properties:{
+    subject:{type:['string','null']},
+    body:{type:'string'}
+  },
+  required:['subject','body'],
+  additionalProperties:false
+};
+
+let outreachChannel = 'email';
+
+function getOutreachSystemPrompt(channel){
+  const channelRules = {
+    email: 'Write a professional email. Include a compelling subject line in the "subject" field. The body should be 4-6 sentences: open with a specific hook tied to the role (not "I am writing to express my interest"), connect 1-2 of the candidate\'s most relevant real achievements to what the job needs, and close with a clear call to action. Mention that CV is attached.',
+    linkedin: 'Write a LinkedIn connection request or direct message. Set "subject" to null. Keep it to 3-4 sentences max (LinkedIn has character limits). Be conversational but professional. Reference something specific about the role. Do not sound like a template.',
+    whatsapp: 'Write a WhatsApp message. Set "subject" to null. Keep it very brief (2-3 sentences), professional but slightly less formal than email. Get straight to the point — who you are, why you\'re reaching out, and that you\'re sending your CV.'
+  };
+  return `You are an expert career coach writing a real outreach message for a candidate applying to a specific job. You have the candidate's database and the job description.
+
+Rules:
+- Use ONLY real facts from the candidate database. Never invent achievements, titles, or metrics not present in the database.
+- ${channelRules[channel] || channelRules.email}
+- Write in English.
+- Do NOT use cliché openings like "I hope this message finds you well" or "I am writing to express my interest."
+- Sound like a real person, not a template. Be specific to THIS role.
+- Output ONLY the JSON matching the schema.`;
+}
+
+async function handleGenerateOutreach(){
+  if(!state.chatSession) return;
+  if(!state.apiKey){ showStatus('outreachStatus','error', t('msg_need_api_key_tab')); return; }
+  const btn = document.getElementById('generateOutreachBtn');
+  btn.disabled = true;
+  showStatus('outreachStatus','info','<div class="spinner"></div> ' + t('msg_building_outreach'));
+  try{
+    const userPrompt = 'CANDIDATE DATABASE (JSON):\n' + JSON.stringify(state.db) +
+      '\n\nTARGET JOB DESCRIPTION:\n' + state.chatSession.jobDescription +
+      '\n\nCHANNEL: ' + outreachChannel;
+    const result = await callOpenAI(state.apiKey, state.model, getOutreachSystemPrompt(outreachChannel), userPrompt, OUTREACH_SCHEMA, 'outreach_message');
+    state.chatSession.outreachMessage = { channel: outreachChannel, subject: result.subject, body: result.body };
+    saveState();
+    renderOutreachMessage();
+    hideStatus('outreachStatus');
+  }catch(err){
+    showStatus('outreachStatus','error', t('msg_error_prefix') + esc(err.message));
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function renderOutreachMessage(){
+  const msg = state.chatSession && state.chatSession.outreachMessage;
+  const container = document.getElementById('outreachContent');
+  if(!msg){ container.style.display = 'none'; return; }
+  container.style.display = 'block';
+  const subjectWrap = document.getElementById('outreachSubjectWrap');
+  if(msg.subject){
+    subjectWrap.style.display = 'block';
+    document.getElementById('outreachSubjectText').textContent = msg.subject;
+  }else{
+    subjectWrap.style.display = 'none';
+  }
+  document.getElementById('outreachBodyText').textContent = msg.body;
+}
+
+function copyOutreachMessage(){
+  const msg = state.chatSession && state.chatSession.outreachMessage;
+  if(!msg) return;
+  const text = (msg.subject ? 'Subject: ' + msg.subject + '\n\n' : '') + msg.body;
+  navigator.clipboard.writeText(text).then(()=>{
+    showStatus('outreachStatus','success', t('msg_outreach_copied'));
+  }).catch(()=>{
+    // fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showStatus('outreachStatus','success', t('msg_outreach_copied'));
+  });
+}
+
+function initOutreachChannelBtns(){
+  document.querySelectorAll('.outreach-ch-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      outreachChannel = btn.getAttribute('data-channel');
+      document.querySelectorAll('.outreach-ch-btn').forEach(b=> b.classList.toggle('selected', b === btn));
+    });
+  });
+}
+
+/* =====================================================================
    INTERVIEW PREP — separate, on-demand, single-shot generation grounded
    in the same database, job description, and the honest match assessment
    already computed for this role. Not part of the iterative CV chat.
@@ -2306,7 +2441,9 @@ function initGenerateTab(){
     document.getElementById('matchAnalysisCard').style.display = 'none';
     document.getElementById('interviewPrepContent').style.display = 'none';
     document.getElementById('generateInterviewBtn').textContent = t('btn_generate_interview_prep');
+    document.getElementById('outreachContent').style.display = 'none';
     hideStatus('interviewStatus');
+    hideStatus('outreachStatus');
     saveState();
     document.getElementById('jobDescArea').value = '';
     document.getElementById('resultsWrap').style.display = 'none';
@@ -2319,6 +2456,10 @@ function initGenerateTab(){
   document.getElementById('downloadCvBtn').addEventListener('click', ()=> exportPdf('cv'));
   document.getElementById('downloadLetterBtn').addEventListener('click', ()=> exportPdf('letter'));
   document.getElementById('generateInterviewBtn').addEventListener('click', handleGenerateInterviewPrep);
+  document.getElementById('generateOutreachBtn').addEventListener('click', handleGenerateOutreach);
+  document.getElementById('copyOutreachBtn').addEventListener('click', copyOutreachMessage);
+  document.getElementById('regenerateOutreachBtn').addEventListener('click', handleGenerateOutreach);
+  initOutreachChannelBtns();
 
   const chatInput = document.getElementById('chatInput');
   const sendFromInput = ()=>{
@@ -2341,6 +2482,9 @@ function initGenerateTab(){
     if(state.chatSession.interviewPrep){
       renderInterviewPrep();
       document.getElementById('generateInterviewBtn').textContent = t('btn_regenerate_interview_prep');
+    }
+    if(state.chatSession.outreachMessage){
+      renderOutreachMessage();
     }
   }
 }
@@ -2898,6 +3042,7 @@ function confirmSaveJob(){
     matchedDomain: r ? r.matchedDomain : '',
     turns: state.chatSession.turns,
     interviewPrep: state.chatSession.interviewPrep || null,
+    outreachMessage: state.chatSession.outreachMessage || null,
     jdSnippet: state.chatSession.jobDescription.slice(0, 120).replace(/\s+/g,' ')
   });
   persistSavedJobs(jobs);
@@ -2926,7 +3071,8 @@ function restoreSavedJob(index){
     jobDescription: job.jobDescription,
     matchAnalysis: job.matchAnalysis,
     turns: job.turns,
-    interviewPrep: job.interviewPrep || null
+    interviewPrep: job.interviewPrep || null,
+    outreachMessage: job.outreachMessage || null
   };
   saveState();
   // switch to generate tab
