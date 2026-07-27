@@ -786,6 +786,15 @@ input[type=color]::-webkit-color-swatch{border-radius:5px;border:none;}
       </div>
 
       <div class="card">
+        <div class="card-title" data-i18n="settings_card_rules"></div>
+        <p style="font-size:13px;color:var(--paper-300);margin:0 0 14px;" data-i18n="rules_desc"></p>
+        <div class="field">
+          <textarea id="generationRulesInput" rows="5" data-i18n-placeholder="rules_placeholder"></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" id="saveRulesBtn" data-i18n="btn_save"></button>
+      </div>
+
+      <div class="card">
         <div class="card-title" data-i18n="settings_card_localdata"></div>
         <p style="font-size:13px;color:var(--paper-300);margin:0 0 14px;" data-i18n="localdata_desc"></p>
         <div class="btn-row">
@@ -1033,9 +1042,6 @@ input[type=color]::-webkit-color-swatch{border-radius:5px;border:none;}
 /* --------------------------- constants --------------------------- */
 const STORAGE_KEY = 'cvArchiveState_v1';
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/responses';
-const OPENAI_EMBEDDINGS_ENDPOINT = 'https://api.openai.com/v1/embeddings';
-const EMBEDDING_MODEL = 'text-embedding-3-large';
-const EMBEDDINGS_STORAGE_KEY = 'cvArchiveEmbeddings_v1';
 const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_THEME_COLOR = '#5E82D6';
 
@@ -1083,6 +1089,9 @@ const I18N = {
   btn_save_settings:         { ar:'حفظ الإعدادات', en:'Save settings' },
   btn_test_connection:       { ar:'اختبار الاتصال', en:'Test connection' },
   settings_card_theme:       { ar:'لون الواجهة', en:'Interface color' },
+  settings_card_rules:       { ar:'قواعد التوليد', en:'Generation Rules' },
+  rules_desc:                { ar:'قواعد ثابتة بتنطبق على كل توليد CV. اكتب قاعدة بكل سطر. الموديل ملزم يتبعها بدون ما تعيد تذكيره كل مرة.', en:'Persistent rules applied to every CV generation. One rule per line. The model is required to follow them without being reminded each time.' },
+  rules_placeholder:         { ar:'مثال:\nدائماً أضف قسم اللغات\nلا تضف خبرة Partner Coordinator إلا لو طلبت صراحة', en:'Example:\nAlways include a Languages section\nNever include Partner Coordinator experience unless I explicitly ask' },
   theme_desc:                { ar:'اختر لون التمييز الأساسي للواجهة. باقي الدرجات (الفاتحة والغامقة) بتنحسب تلقائياً منه.', en:'Pick the primary accent color for the interface. The lighter and darker shades are derived from it automatically.' },
   label_custom_color:        { ar:'لون مخصص', en:'Custom color' },
   settings_card_localdata:   { ar:'إدارة البيانات المحلية', en:'Local data management' },
@@ -1435,6 +1444,7 @@ let state = {
   model: DEFAULT_MODEL,
   lang: 'ar',
   themeColor: DEFAULT_THEME_COLOR,
+  generationRules: 'Always include a Languages section in every CV.\nNever include the Partner Coordinator experience unless I explicitly ask for it.',
   db: emptyDb(),
   chatSession: null   // { jobDescription, turns:[{role:'assistant',result}|{role:'user',text}] }
 };
@@ -1453,7 +1463,7 @@ let ui = {
 function saveState(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      apiKey: state.apiKey, model: state.model, lang: state.lang, themeColor: state.themeColor, db: state.db, chatSession: state.chatSession
+      apiKey: state.apiKey, model: state.model, lang: state.lang, themeColor: state.themeColor, generationRules: state.generationRules, db: state.db, chatSession: state.chatSession
     }));
   }catch(e){ console.error('saveState failed', e); }
 }
@@ -1467,6 +1477,7 @@ function loadState(){
       state.model = parsed.model || DEFAULT_MODEL;
       state.lang = parsed.lang === 'en' ? 'en' : 'ar';
       state.themeColor = parsed.themeColor || DEFAULT_THEME_COLOR;
+      state.generationRules = parsed.generationRules || '';
       state.db = parsed.db || emptyDb();
       state.chatSession = parsed.chatSession || null;
     }
@@ -1520,6 +1531,12 @@ function initTabs(){
 function initSettingsTab(){
   document.getElementById('apiKeyInput').value = state.apiKey;
   document.getElementById('modelInput').value = state.model;
+  document.getElementById('generationRulesInput').value = state.generationRules || '';
+  document.getElementById('saveRulesBtn').addEventListener('click', ()=>{
+    state.generationRules = document.getElementById('generationRulesInput').value.trim();
+    saveState();
+    showStatus('settingsStatus','success', t('msg_settings_saved'));
+  });
 
   document.getElementById('pwToggleBtn').addEventListener('click', ()=>{
     const input = document.getElementById('apiKeyInput');
@@ -1624,251 +1641,6 @@ async function callOpenAI(apiKey, model, systemPrompt, userPrompt, jsonSchema, s
     { role:'system', content: systemPrompt },
     { role:'user', content: userPrompt }
   ], jsonSchema, schemaName);
-}
-
-/* =====================================================================
-   SEMANTIC SEARCH ENGINE — embedding-based retrieval for CV generation
-   
-   Architecture:
-   1. chunkDatabase() → breaks the DB into atomic semantic units (each
-      bullet point, skill cluster, project description, etc.) with
-      metadata identifying its source.
-   2. generateAndStoreEmbeddings() → calls OpenAI Embeddings API for
-      each chunk, stores the vectors in localStorage.
-   3. semanticSearch() → embeds the JD, computes cosine similarity
-      against all stored vectors, returns the top-K most relevant
-      chunks ranked by semantic distance.
-   4. The CV generation prompt receives ONLY the retrieved chunks
-      (not the entire database) and is instructed to COMPOSE new
-      sentences inspired by the matched experience, not copy them.
-   ===================================================================== */
-
-function chunkDatabase(db){
-  const chunks = [];
-  let id = 0;
-  const add = (text, meta) => { if(text && text.trim().length > 5) chunks.push({ id: id++, text: text.trim(), meta }); };
-
-  /* ---- LEVEL 1: Contextual Achievement Tokens ----
-     Each bullet point embedded WITH its full role context, so
-     "Improved efficiency by 15%" becomes "As Vendor & Resource
-     Allocation Coordinator at Acuative (Dispatch Operations,
-     2023-2024): Improved vendor response efficiency by 15%..."
-     This is the most critical fix — isolated bullets lose meaning. */
-  (db.workExperience || []).forEach(we => {
-    const role = we.title || '';
-    const company = we.company || '';
-    const domain = we.domainTag || '';
-    const period = [we.startDate, we.isCurrent?'Present':we.endDate].filter(Boolean).join('–');
-    const techs = (we.technologies||[]).join(', ');
-    const roleCtx = `As ${role} at ${company}` + (domain ? ` (${domain})` : '') + (period ? `, ${period}` : '');
-
-    // role-level summary token
-    const roleSummary = [role, company, domain, period, techs ? 'Technologies: '+techs : ''].filter(Boolean).join(' | ');
-    add(roleSummary, { type:'role_summary', source: role+' at '+company, period, domain });
-
-    // each bullet WITH role context prepended
-    (we.bullets || []).forEach(b => {
-      add(roleCtx + ': ' + b, { type:'achievement', source: role+' at '+company, period, domain });
-    });
-
-    // technology-role cross-reference
-    if(techs){
-      add(`Tools and technologies used as ${role} at ${company}: ${techs}`, { type:'tech_crossref', source: role+' at '+company, period, domain });
-    }
-  });
-
-  /* ---- LEVEL 2: Domain Summary Tokens ----
-     Aggregate all experience per domain tag into one rich token,
-     so "Dispatch Operations" gets a single token summarizing ALL
-     dispatch-related roles, achievements, and tools across the career. */
-  const domainMap = {};
-  (db.workExperience || []).forEach(we => {
-    const d = we.domainTag || 'General';
-    if(!domainMap[d]) domainMap[d] = { roles:[], bullets:[], techs:new Set() };
-    domainMap[d].roles.push((we.title||'') + ' at ' + (we.company||''));
-    (we.bullets||[]).forEach(b => domainMap[d].bullets.push(b));
-    (we.technologies||[]).forEach(t2 => domainMap[d].techs.add(t2));
-  });
-  Object.keys(domainMap).forEach(domain => {
-    const d = domainMap[domain];
-    const summary = `Domain: ${domain}. Roles: ${d.roles.join('; ')}. Key achievements: ${d.bullets.slice(0,5).join('; ')}. Technologies: ${[...d.techs].join(', ')}.`;
-    add(summary, { type:'domain_summary', source: domain, domain });
-  });
-
-  /* ---- LEVEL 3: Skill-Experience Cross-Reference Tokens ----
-     Each skill category linked to WHERE it was demonstrated. */
-  (db.skills || []).forEach(sk => {
-    const cat = sk.category || 'Skills';
-    const items = (sk.items||[]).join(', ');
-    // find which roles used these skills (by checking technology overlap)
-    const relatedRoles = (db.workExperience||[])
-      .filter(we => (we.technologies||[]).some(t2 => (sk.items||[]).some(s => t2.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(t2.toLowerCase()))))
-      .map(we => we.title + ' at ' + we.company);
-    const ctx = relatedRoles.length > 0 ? ` — demonstrated in: ${relatedRoles.join('; ')}` : '';
-    add(`${cat}: ${items}${ctx}`, { type:'skill_crossref', source: cat });
-  });
-
-  /* ---- LEVEL 4: Competency Tokens ----
-     Extract quantified achievements (with numbers/percentages)
-     and create standalone competency tokens with full context. */
-  (db.workExperience || []).forEach(we => {
-    const role = we.title || '';
-    const company = we.company || '';
-    (we.bullets || []).forEach(b => {
-      if(/\d+%|\d+\s*(technicians|team|staff|clients|vendors|projects)/i.test(b)){
-        add(`Quantified achievement as ${role} at ${company}: ${b}`, { type:'competency', source: role+' at '+company, domain: we.domainTag||'' });
-      }
-    });
-  });
-
-  /* ---- LEVEL 5: Education, Certifications, Projects, Languages ---- */
-  (db.education || []).forEach(ed => {
-    add([ed.degree, ed.field ? 'in '+ed.field : '', ed.institution ? 'from '+ed.institution : '', ed.endDate||''].filter(Boolean).join(' '),
-      { type:'education', source: ed.institution||'' });
-  });
-
-  (db.certifications || []).forEach(cert => {
-    add('Certification: ' + [cert.name, cert.issuer ? 'by '+cert.issuer : '', cert.date||''].filter(Boolean).join(' '),
-      { type:'certification', source: cert.name||'' });
-  });
-
-  (db.projects || []).forEach(proj => {
-    const projCtx = 'Project: ' + (proj.name||'') + (proj.domainTag ? ' ('+proj.domainTag+')' : '') + (proj.role ? ', Role: '+proj.role : '');
-    const techs = (proj.technologies||[]).join(', ');
-    add(projCtx + (techs ? '. Technologies: '+techs : ''), { type:'project', source: proj.name||'', domain: proj.domainTag||'' });
-    (proj.bullets || []).forEach(b => {
-      add(projCtx + ': ' + b, { type:'project_achievement', source: proj.name||'', domain: proj.domainTag||'' });
-    });
-  });
-
-  (db.languages || []).forEach(lang => {
-    add('Language: ' + lang.language + ' — ' + (lang.proficiency||''), { type:'language', source: lang.language||'' });
-  });
-
-  if(db.personalInfo && db.personalInfo.summary){
-    add('Professional Summary: ' + db.personalInfo.summary, { type:'summary', source:'Personal Summary' });
-  }
-
-  return chunks;
-}
-
-async function callEmbeddingsAPI(apiKey, texts){
-  const res = await fetch(OPENAI_EMBEDDINGS_ENDPOINT, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, input: texts })
-  });
-  if(!res.ok){
-    let msg = 'HTTP ' + res.status;
-    try{ const errBody = await res.json(); if(errBody?.error?.message) msg = errBody.error.message; }catch(e){}
-    throw new Error(msg);
-  }
-  const data = await res.json();
-  return data.data.map(d => d.embedding);
-}
-
-async function generateAndStoreEmbeddings(){
-  if(!state.apiKey) return;
-  const chunks = chunkDatabase(state.db);
-  if(chunks.length === 0) return;
-
-  // batch embed in groups of 50 (API limit is 2048 but let's be safe)
-  const BATCH = 50;
-  const allEmbeddings = [];
-  for(let i = 0; i < chunks.length; i += BATCH){
-    const batch = chunks.slice(i, i + BATCH);
-    const texts = batch.map(c => c.text);
-    const embeddings = await callEmbeddingsAPI(state.apiKey, texts);
-    embeddings.forEach((emb, j) => {
-      allEmbeddings.push({ id: batch[j].id, text: batch[j].text, meta: batch[j].meta, vector: emb });
-    });
-  }
-
-  try{
-    localStorage.setItem(EMBEDDINGS_STORAGE_KEY, JSON.stringify(allEmbeddings));
-  }catch(e){ console.error('Failed to store embeddings', e); }
-
-  return allEmbeddings;
-}
-
-function loadStoredEmbeddings(){
-  try{
-    const raw = localStorage.getItem(EMBEDDINGS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  }catch(e){ return null; }
-}
-
-function cosineSimilarity(a, b){
-  let dot = 0, magA = 0, magB = 0;
-  for(let i = 0; i < a.length; i++){
-    dot += a[i] * b[i];
-    magA += a[i] * a[i];
-    magB += b[i] * b[i];
-  }
-  magA = Math.sqrt(magA);
-  magB = Math.sqrt(magB);
-  return (magA && magB) ? dot / (magA * magB) : 0;
-}
-
-async function semanticSearch(jdText, topK){
-  let stored = loadStoredEmbeddings();
-  if(!stored || stored.length === 0){
-    stored = await generateAndStoreEmbeddings();
-  }
-  if(!stored || stored.length === 0) return [];
-
-  const jdEmbeddings = await callEmbeddingsAPI(state.apiKey, [jdText]);
-  const jdVector = jdEmbeddings[0];
-
-  const scored = stored.map(entry => ({
-    ...entry,
-    score: cosineSimilarity(jdVector, entry.vector)
-  }));
-  scored.sort((a, b) => b.score - a.score);
-
-  const K = topK || 50;
-  const MIN_SCORE = 0.20;
-  const primary = scored.filter(s => s.score >= MIN_SCORE).slice(0, K);
-
-  // diversity: ensure at least one token from each important type
-  const importantTypes = ['role_summary','domain_summary','skill_crossref','education','certification','competency'];
-  const presentTypes = new Set(primary.map(p => p.meta.type));
-  importantTypes.forEach(type => {
-    if(!presentTypes.has(type)){
-      const best = scored.find(s => s.meta.type === type);
-      if(best) primary.push(best);
-    }
-  });
-  primary.sort((a, b) => b.score - a.score);
-  return primary;
-}
-
-function formatRetrievedContext(matches){
-  const groups = {};
-  matches.forEach(m => {
-    const key = m.meta.type;
-    if(!groups[key]) groups[key] = [];
-    groups[key].push(m);
-  });
-
-  let text = '';
-  const order = ['domain_summary','role_summary','achievement','competency','tech_crossref','skill_crossref','project','project_achievement','certification','education','summary','language'];
-  order.forEach(type => {
-    if(!groups[type]) return;
-    const label = type.replace(/_/g,' ').toUpperCase();
-    text += '\n[' + label + ']\n';
-    groups[type].forEach(m => {
-      text += '• ' + m.text + ' [sim: ' + (m.score * 100).toFixed(0) + '%]\n';
-    });
-  });
-  // catch any types not in the order list
-  Object.keys(groups).forEach(type => {
-    if(!order.includes(type)){
-      text += '\n[' + type.toUpperCase() + ']\n';
-      groups[type].forEach(m => { text += '• ' + m.text + ' [sim: ' + (m.score * 100).toFixed(0) + '%]\n'; });
-    }
-  });
-  return text;
 }
 
 /* =====================================================================
@@ -2243,10 +2015,7 @@ async function handleAnalyzeCv(){
     document.getElementById('cvPasteArea').value = '';
 
     // auto-generate semantic embeddings
-    showStatus('dbStatus','info','<div class="spinner"></div> ' + t('msg_indexing'));
-    await generateAndStoreEmbeddings();
-    const chunkCount = chunkDatabase(state.db).length;
-    showStatus('dbStatus','success', t('msg_cv_merged') + ' — ' + chunkCount + ' ' + t('word_tokens_indexed'));
+    showStatus('dbStatus','success', t('msg_cv_merged'));
   }catch(err){
     showStatus('dbStatus','error', t('msg_error_prefix') + esc(err.message));
   }finally{
@@ -2576,44 +2345,36 @@ function renderInterviewPrep(){
   container.innerHTML = html;
 }
 
-function buildChatSystemPrompt(includeMatchAnalysis, useSemanticContext){
+function buildChatSystemPrompt(includeMatchAnalysis){
   const replyLanguageName = state.lang === 'en' ? 'English' : 'Arabic';
-  let prompt = `You are an expert resume writer and career strategist helping a candidate whose real experience spans multiple distinct professional domains. You are in an ongoing conversation with the candidate: they gave you a job description and their experience database once (in the first user message), and from now on they will send you follow-up feedback and direction to refine the CV and cover letter. Every time you reply, output the complete, current best version of the tailored CV and cover letter reflecting ALL guidance given so far in the conversation — never a partial diff.
+  let prompt = `You are an expert resume writer and career strategist helping a candidate whose real experience spans multiple distinct professional domains. You are in an ongoing conversation with the candidate: they gave you a job description and their full experience database once (in the first user message), and from now on they will send you follow-up feedback. Every time you reply, output the complete, current best version of the tailored CV and cover letter — never a partial diff.
 
 Rules:
-- Use ONLY real experience, skills, and facts present in the candidate's data provided at the start of the conversation. NEVER invent employers, titles, dates, tools, metrics, or accomplishments that are not in the data — even if the candidate's feedback seems to call for something not present. If their feedback implies adding a fact you don't have, instead reframe using only real material, and say so plainly in changeSummary.
-- All content inside tailoredCV, coverLetter, and matchedDomain must be written in English always, regardless of what language the candidate uses to give you feedback.
-- "changeSummary" is the only field written in a different language: write it in ${replyLanguageName}, 1-3 sentences. On the first turn explain which domain you matched and why; on later turns explain what you changed in response to their feedback.`;
+- Use ONLY real experience, skills, and facts present in the candidate database. NEVER invent employers, titles, dates, tools, metrics, or accomplishments not in the database.
+- ALWAYS include a "Languages" section in the CV with the candidate's languages from the database. This is mandatory and must never be omitted.
+- COMPOSE new, original bullet points that blend the candidate's REAL achievements with the job description's terminology. Do NOT just copy database bullets verbatim — rewrite them using the JD's action verbs, industry terms, and priority areas while remaining 100% factually grounded in what the candidate actually did.
+- For the professional summary: compose a fresh 3-4 sentence narrative that positions the candidate as a natural fit for THIS specific role.
+- For core skills: select and order to mirror the JD's requirements, using the JD's exact terminology where the candidate genuinely has that skill.
+- Prioritize and restructure: put the most JD-relevant experience first. Reframe tangential experience to highlight relevance. Omit entries that don't serve the narrative for this role.
+- All content inside tailoredCV, coverLetter, and matchedDomain must be in English.
+- "changeSummary" must be in ${replyLanguageName}, 1-3 sentences explaining what you matched/changed.`;
 
-  if(useSemanticContext){
-    prompt += `
-
-IMPORTANT — SEMANTIC COMPOSITION MODE:
-The candidate's experience has been pre-processed through a semantic search engine. You are receiving ONLY the chunks most semantically similar to the job description, ranked by cosine similarity score. Your task is NOT to copy these bullets as-is into the CV. Instead:
-1. ANALYZE the job description's specific language, keywords, and priorities.
-2. COMPOSE new, original bullet points that blend the candidate's REAL achievements (from the retrieved chunks) with the job description's terminology and framing.
-3. Each bullet should read as if the candidate wrote it specifically for THIS job — using the JD's action verbs, industry terms, and priority areas — while remaining 100% factually grounded in what the candidate actually did.
-4. Restructure and re-prioritize: put the most JD-relevant achievements first, reframe tangential experience to highlight its relevance to this role, and omit chunks that don't serve the narrative even if they scored high on similarity.
-5. For the professional summary: compose a fresh 3-4 sentence narrative that positions the candidate as a natural fit for THIS specific role, drawing on the retrieved experience.
-6. For core skills: select and order skills to mirror the JD's requirements list as closely as possible (using the JD's exact terminology where the candidate genuinely has that skill).`;
-  }else{
-    prompt += `
-- Select and prioritize the entries most relevant to the job description and to the candidate's stated direction; you may omit clearly irrelevant entries, but never fabricate new ones to fill gaps.
-- Reword bullets to mirror the language and priorities of the job description where doing so remains fully factually accurate — this is reframing, not invention.`;
+  // inject user-defined custom generation rules
+  const customRules = (state.generationRules || '').trim();
+  if(customRules){
+    prompt += `\n\nThe candidate has set the following CUSTOM RULES that must be obeyed in every generation:\n${customRules}`;
   }
 
   if(includeMatchAnalysis){
     prompt += `
 
-Additionally, on this first message only, honestly assess the fit between this job description and the candidate's REAL database, before doing any tailoring:
-- "jdSummary": summarize in ${replyLanguageName}, in 2-4 plain sentences, what the job actually requires and involves — core responsibilities, must-have qualifications, and seniority level. Do not editorialize.
-- "matchPercentage": an honest integer 0-100 estimate of how well the candidate's ACTUAL background (not a reframed or optimistic version of it) matches what this job requires. Weight this on hard requirements — years of experience, specific domain, required tools, certifications, education, seniority — as much as on soft overlap. A score of 90+ means the candidate essentially already does this job. A candidate applying outside their real domain, below the required seniority, or missing explicit hard requirements should score well under 50, even if some transferable skills exist. Do not inflate this number to be encouraging.
-- "honestVerdict": write in ${replyLanguageName}, 2-4 direct sentences. The candidate explicitly asked for this without flattery or diplomatic softening, so do not hedge with phrases that soften bad news. If this is a stretch or a weak match, say so plainly and name the specific gaps (missing years of experience, wrong domain, missing required certification or tool, seniority mismatch). If it genuinely is a strong match, say that plainly too, without inflating it further. Calibrate to reality, not to encouragement in either direction.`;
+Additionally, on this first message only, honestly assess the fit:
+- "jdSummary": summarize in ${replyLanguageName}, 2-4 sentences, what the job requires. Do not editorialize.
+- "matchPercentage": honest integer 0-100. Weight hard requirements heavily. 90+ = essentially already does this job. Outside real domain or missing hard requirements = well under 50 even with transferable skills. Do not inflate.
+- "honestVerdict": ${replyLanguageName}, 2-4 direct sentences. No flattery. Name specific gaps plainly if weak match.`;
   }
 
-  prompt += `
-
-Output ONLY the JSON matching the schema, every time.`;
+  prompt += `\n\nOutput ONLY the JSON matching the schema, every time.`;
   return prompt;
 }
 
@@ -2626,19 +2387,10 @@ function getLatestResult(){
   return null;
 }
 
-function buildChatBaseMessages(includeMatchAnalysis, retrievedContext){
-  let userContent;
-  if(retrievedContext){
-    userContent = 'The following are the MOST SEMANTICALLY RELEVANT chunks from the candidate\'s experience database, pre-ranked by similarity to the job description. These are the candidate\'s REAL experiences — use ONLY these as raw material. You may reword, reframe, and compose new sentences that blend these real facts with the job description\'s language, but you must not invent any fact, metric, title, or achievement not present in these chunks.\n\n'
-      + 'RETRIEVED RELEVANT EXPERIENCE (ranked by similarity):\n' + retrievedContext
-      + '\n\nFULL PERSONAL INFO:\n' + JSON.stringify(state.db.personalInfo)
-      + '\n\nTARGET JOB DESCRIPTION:\n' + state.chatSession.jobDescription;
-  }else{
-    userContent = 'CANDIDATE DATABASE (JSON, ground truth — do not go beyond this):\n' + JSON.stringify(state.db) + '\n\nTARGET JOB DESCRIPTION:\n' + state.chatSession.jobDescription;
-  }
+function buildChatBaseMessages(includeMatchAnalysis){
   return [
-    { role:'system', content: buildChatSystemPrompt(includeMatchAnalysis, !!retrievedContext) },
-    { role:'user', content: userContent }
+    { role:'system', content: buildChatSystemPrompt(includeMatchAnalysis) },
+    { role:'user', content: 'CANDIDATE DATABASE (JSON, ground truth — do not go beyond this):\n' + JSON.stringify(state.db) + '\n\nTARGET JOB DESCRIPTION:\n' + state.chatSession.jobDescription }
   ];
 }
 
@@ -2657,26 +2409,10 @@ async function startChatSession(){
   if(!hasAnyData){ showStatus('generateStatus','error', t('msg_db_empty')); return; }
 
   state.chatSession = { jobDescription: jd, turns: [], matchAnalysis: null };
+  showStatus('generateStatus','info','<div class="spinner"></div> ' + t('msg_building_first'));
   setBusy(true);
-
-  let retrievedContext = null;
   try{
-    // Step 1: semantic search
-    showStatus('generateStatus','info','<div class="spinner"></div> ' + t('msg_semantic_search'));
-    const matches = await semanticSearch(jd, 30);
-    if(matches.length > 0){
-      retrievedContext = formatRetrievedContext(matches);
-      state.chatSession.retrievedChunks = matches.length;
-    }
-  }catch(e){
-    console.warn('Semantic search failed, falling back to full database:', e.message);
-    // continue without semantic context — fallback to old behavior
-  }
-
-  try{
-    // Step 2: generate CV with the retrieved (or full) context
-    showStatus('generateStatus','info','<div class="spinner"></div> ' + t('msg_building_first'));
-    const result = await callOpenAIMessages(state.apiKey, state.model, buildChatBaseMessages(true, retrievedContext), INITIAL_SCHEMA, 'tailored_application_initial');
+    const result = await callOpenAIMessages(state.apiKey, state.model, buildChatBaseMessages(true), INITIAL_SCHEMA, 'tailored_application_initial');
     state.chatSession.matchAnalysis = {
       jdSummary: result.jdSummary,
       matchPercentage: result.matchPercentage,
