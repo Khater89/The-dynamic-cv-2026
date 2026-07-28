@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
 /* ============================= DESIGN TOKENS ============================= */
 :root{
@@ -487,6 +489,32 @@ input:focus,textarea:focus,select:focus{
 .match-sub-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent2-300);margin-bottom:6px;}
 .match-sub-block p{font-size:13.5px;color:var(--paper-300);line-height:1.65;margin:0;}
 
+/* ============================= FILE UPLOAD ============================= */
+.upload-zone{
+  border:2px dashed var(--ink-600);
+  border-radius:var(--radius-lg);
+  padding:32px 20px;
+  text-align:center;
+  cursor:pointer;
+  transition:border-color .2s ease, background .2s ease;
+}
+.upload-zone:hover, .upload-zone.dragover{
+  border-color:var(--accent-500);
+  background:rgba(var(--accent-rgb),0.05);
+}
+.upload-icon{font-size:34px;margin-bottom:10px;}
+.upload-text{font-size:14px;color:var(--paper-100);font-weight:600;margin-bottom:5px;}
+.upload-hint{font-size:12px;color:var(--paper-500);}
+.or-divider{
+  display:flex;align-items:center;text-align:center;
+  color:var(--paper-500);font-size:12px;font-family:var(--font-mono);
+  margin:20px 0;
+}
+.or-divider::before, .or-divider::after{
+  content:'';flex:1;border-bottom:1px solid var(--ink-700);
+}
+.or-divider span{padding:0 14px;}
+
 /* ============================= OUTREACH MESSAGE ============================= */
 .outreach-ch-btn.selected{background:var(--accent-500);color:#fff;border-color:var(--accent-500);}
 
@@ -813,6 +841,21 @@ input[type=color]::-webkit-color-swatch{border-radius:5px;border:none;}
 
       <div class="card">
         <div class="card-title" data-i18n="db_card_add"></div>
+
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-icon">📄</div>
+          <div class="upload-text" data-i18n="upload_dropzone_text"></div>
+          <div class="upload-hint" data-i18n="upload_formats_hint"></div>
+          <input type="file" id="fileUploadInput" accept=".pdf,.doc,.docx,.txt" multiple style="display:none;">
+        </div>
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="btn btn-ghost btn-sm" id="browseFilesBtn" data-i18n="btn_browse_files"></button>
+          <button class="btn btn-ghost btn-sm" id="googleDriveBtn" data-i18n="btn_google_drive"></button>
+        </div>
+        <div class="status" id="uploadStatus"></div>
+
+        <div class="or-divider"><span data-i18n="or_paste_text"></span></div>
+
         <div class="field">
           <label for="cvPasteArea" data-i18n="label_cv_paste"></label>
           <textarea id="cvPasteArea" rows="8" data-i18n-placeholder="placeholder_cv_paste"></textarea>
@@ -1110,6 +1153,16 @@ const I18N = {
   db_heading:                { ar:'قاعدة البيانات', en:'Database' },
   db_desc:                   { ar:'هون بتبني السجل الشامل لكل خبراتك. الصق أي CV قديم عندك، وراح يتحلل وينضم لنفس القاعدة — بدون ما يمسح أو يكرر شي موجود.', en:'This is where you build the full record of your experience. Paste any old CV you have, and it will be analyzed and merged into the same database — without erasing or duplicating anything already there.' },
   db_card_add:               { ar:'إضافة CV للقاعدة', en:'Add a CV to the database' },
+  upload_dropzone_text:      { ar:'اسحب ملف الـCV هنا أو اضغط للاختيار', en:'Drag your CV file here or click to browse' },
+  upload_formats_hint:       { ar:'PDF · Word · نص', en:'PDF · Word · Text' },
+  btn_browse_files:          { ar:'اختر من الجهاز', en:'Browse device' },
+  btn_google_drive:          { ar:'Google Drive', en:'Google Drive' },
+  or_paste_text:             { ar:'أو الصق النص يدوياً', en:'or paste text manually' },
+  msg_extracting:            { ar:'جاري استخلاص محتوى الملف...', en:'Extracting file content...' },
+  msg_extracted_ok:          { ar:'تم استخلاص المحتوى ✓ راجعه ثم اضغط تحليل', en:'Content extracted ✓ Review it then click Analyze' },
+  msg_extract_failed:        { ar:'فشل استخلاص الملف: ', en:'Failed to extract file: ' },
+  msg_unsupported_file:      { ar:'نوع ملف غير مدعوم. استخدم PDF أو Word أو نص.', en:'Unsupported file type. Use PDF, Word, or text.' },
+  msg_gdrive_soon:           { ar:'ربط Google Drive يتطلب إعداد إضافي. حالياً استخدم الرفع المباشر — نزّل الملف من Drive ثم ارفعه هنا.', en:'Google Drive integration requires extra setup. For now use direct upload — download the file from Drive then upload it here.' },
   label_cv_paste:            { ar:'الصق نص الـCV هون (أي لغة، أي صيغة)', en:'Paste the CV text here (any language, any format)' },
   placeholder_cv_paste:      { ar:'الصق محتوى الـCV كامل...', en:'Paste the full CV content...' },
   btn_analyze_cv:            { ar:'تحليل ودمج بقاعدة البيانات', en:'Analyze and merge into database' },
@@ -2036,6 +2089,95 @@ function initDatabaseTab(){
     renderDatabaseTab();
     showStatus('dbStatus','success', t('msg_db_cleared'));
   });
+
+  // file upload wiring
+  const uploadZone = document.getElementById('uploadZone');
+  const fileInput = document.getElementById('fileUploadInput');
+  document.getElementById('browseFilesBtn').addEventListener('click', ()=> fileInput.click());
+  uploadZone.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', e=> handleFilesSelected(e.target.files));
+
+  uploadZone.addEventListener('dragover', e=>{ e.preventDefault(); uploadZone.classList.add('dragover'); });
+  uploadZone.addEventListener('dragleave', ()=> uploadZone.classList.remove('dragover'));
+  uploadZone.addEventListener('drop', e=>{
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    handleFilesSelected(e.dataTransfer.files);
+  });
+
+  document.getElementById('googleDriveBtn').addEventListener('click', ()=>{
+    showStatus('uploadStatus','info', t('msg_gdrive_soon'));
+  });
+}
+
+/* --------------------------- file content extraction --------------------------- */
+async function extractPdfText(file){
+  const arrayBuffer = await file.arrayBuffer();
+  // configure pdf.js worker
+  if(window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions){
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let fullText = '';
+  for(let i = 1; i <= pdf.numPages; i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items.map(item => item.str).join(' ');
+    fullText += pageText + '\n\n';
+  }
+  return fullText.trim();
+}
+
+async function extractWordText(file){
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await window.mammoth.extractRawText({ arrayBuffer });
+  return (result.value || '').trim();
+}
+
+function extractPlainText(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('read error'));
+    reader.readAsText(file);
+  });
+}
+
+async function handleFilesSelected(fileList){
+  const files = Array.from(fileList || []);
+  if(files.length === 0) return;
+
+  showStatus('uploadStatus','info','<div class="spinner"></div> ' + t('msg_extracting'));
+  let combinedText = '';
+
+  try{
+    for(const file of files){
+      const name = file.name.toLowerCase();
+      let text = '';
+      if(name.endsWith('.pdf')){
+        text = await extractPdfText(file);
+      }else if(name.endsWith('.docx') || name.endsWith('.doc')){
+        text = await extractWordText(file);
+      }else if(name.endsWith('.txt')){
+        text = await extractPlainText(file);
+      }else{
+        showStatus('uploadStatus','error', t('msg_unsupported_file'));
+        continue;
+      }
+      if(text){
+        combinedText += (combinedText ? '\n\n---\n\n' : '') + '[From file: ' + file.name + ']\n' + text;
+      }
+    }
+
+    if(combinedText){
+      // append to existing paste content rather than overwrite
+      const pasteArea = document.getElementById('cvPasteArea');
+      pasteArea.value = (pasteArea.value ? pasteArea.value + '\n\n' : '') + combinedText;
+      showStatus('uploadStatus','success', t('msg_extracted_ok'));
+    }
+  }catch(err){
+    showStatus('uploadStatus','error', t('msg_extract_failed') + esc(err.message || String(err)));
+  }
 }
 
 function handleImportDb(e){
