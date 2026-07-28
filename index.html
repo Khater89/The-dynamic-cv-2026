@@ -908,18 +908,18 @@ input[type=color]::-webkit-color-swatch{border-radius:5px;border:none;}
         </div>
 
         <div class="card" id="matchAnalysisCard" style="display:none;">
-          <div class="card-title" data-i18n="match_analysis_title"></div>
+          <div class="card-title" id="matchAnalysisTitle">تحليل التطابق</div>
           <div class="match-percentage-row">
             <div class="match-percentage-value" id="matchPercentageValue">—%</div>
             <div class="match-percentage-bar"><div class="match-percentage-fill" id="matchPercentageFill" style="width:0%;"></div></div>
           </div>
           <div class="match-sub-block">
-            <div class="match-sub-label" data-i18n="jd_summary_label"></div>
-            <p id="jdSummaryText"></p>
+            <div class="match-sub-label">ملخص الوصف الوظيفي</div>
+            <p id="jdSummaryText" dir="rtl" style="text-align:right;"></p>
           </div>
           <div class="match-sub-block">
-            <div class="match-sub-label" data-i18n="honest_verdict_label"></div>
-            <p id="honestVerdictText"></p>
+            <div class="match-sub-label">التقييم الصريح</div>
+            <p id="honestVerdictText" dir="rtl" style="text-align:right;"></p>
           </div>
         </div>
 
@@ -2510,10 +2510,10 @@ Rules:
   if(includeMatchAnalysis){
     prompt += `
 
-Additionally, on this first message only, honestly assess the fit:
-- "jdSummary": summarize in ${replyLanguageName}, 2-4 sentences, what the job requires. Do not editorialize.
+Additionally, on this first message only, honestly assess the fit. IMPORTANT: "jdSummary" and "honestVerdict" must ALWAYS be written in Arabic, regardless of any other language setting.
+- "jdSummary": summarize in Arabic, 2-4 sentences, what the job requires. Do not editorialize.
 - "matchPercentage": honest integer 0-100. Weight hard requirements heavily. 90+ = essentially already does this job. Outside real domain or missing hard requirements = well under 50 even with transferable skills. Do not inflate.
-- "honestVerdict": ${replyLanguageName}, 2-4 direct sentences. No flattery. Name specific gaps plainly if weak match.`;
+- "honestVerdict": write in Arabic, 2-4 direct sentences. No flattery. Name specific gaps plainly if weak match.`;
   }
 
   prompt += `\n\nOutput ONLY the JSON matching the schema, every time.`;
